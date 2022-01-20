@@ -6,8 +6,8 @@ using twitterXcrypto.util;
 Plugins.Add<AspNetPlugin>();
 
 var client = new TwitterClient(consumerKey: "1HqxAIikTtTkIF2FT1rAu5paw",
-                           consumerSecret: "IQ8INgkQshPTvdZPc11tedNOMKjihMdT0V3vnu5WsqF5ZrFpI4",
-                           bearerToken: "AAAAAAAAAAAAAAAAAAAAAJxOYQEAAAAACSMLy7fNoyv8ybUIGpKN6tpghoA%3DHqbB1VUNkQNb9eH4Nfe6UDCzK5W7oW9UObF6ah7IiXcjGYwnT0");
+                               consumerSecret: "IQ8INgkQshPTvdZPc11tedNOMKjihMdT0V3vnu5WsqF5ZrFpI4",
+                               bearerToken: "AAAAAAAAAAAAAAAAAAAAAJxOYQEAAAAACSMLy7fNoyv8ybUIGpKN6tpghoA%3DHqbB1VUNkQNb9eH4Nfe6UDCzK5W7oW9UObF6ah7IiXcjGYwnT0");
 var requestHandler = client.AccountActivity.CreateRequestHandler();
 var server = new SimpleHttpServer(8042);
 server.OnRequest += async (sender, context) =>
@@ -25,7 +25,7 @@ server.OnRequest += async (sender, context) =>
         {
             Log.Write("Failed handling Twitter-request. Exiting...", Log.LogLevel.FTL);
             Environment.Exit(1);
-        }        
+        }
     }
     else
     {
@@ -39,12 +39,26 @@ server.OnRequest += async (sender, context) =>
 };
 
 server.Start();
+IWebhook webhook = await client.AccountActivity.CreateAccountActivityWebhookAsync("sandbox", "https://e0ae-188-192-200-126.ngrok.io");
 
-// important stuff
-IWebhook webhook = await client.AccountActivity.CreateAccountActivityWebhookAsync("foo", "bar");
+await client.AccountActivity.SubscribeToAccountActivityAsync("sandbox");
+var environmentState = await client.AccountActivity.GetAccountActivitySubscriptionsAsync("sandbox");
+long uid = long.Parse(environmentState.Subscriptions.First().UserId);
+var accountActivityStream = requestHandler.GetAccountActivityStream(uid, "sandbox");
+accountActivityStream.TweetCreated += (sender, tweetCreatedEvent) =>
+{
+    Log.Write($"A tweet was created by {tweetCreatedEvent.Tweet.CreatedBy.Name}: {tweetCreatedEvent.Tweet.Text}");
+};
 
-await server.WaitUntilDisposed();
+// wait for user-abort with 'q'
+while (Console.ReadKey().KeyChar != 'q') ;
+
+// cleanup
+var webhooks = await client.AccountActivity.GetAccountActivityEnvironmentWebhooksAsync("sandbox");
+foreach (var hook in webhooks)
+{
+    await client.AccountActivity.DeleteAccountActivityWebhookAsync("sandbox", hook);
+}
+
+server.Stop();
 Environment.Exit(0);
-
-
-

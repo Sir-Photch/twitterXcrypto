@@ -32,6 +32,11 @@ namespace twitterXcrypto.util
 #pragma warning restore CS4014
         }
 
+        public void Stop()
+        {
+            _server.Stop();
+        }
+
         private async Task RunServerAsync()
         {
             while (_server.IsListening)
