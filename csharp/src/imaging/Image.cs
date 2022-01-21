@@ -7,8 +7,11 @@ namespace twitterXcrypto.imaging
     {
         internal Mat Mat { get; } = new();
 
-        internal Image(Stream stream)
+        internal string Name { get; }
+
+        internal Image(Stream stream, string name)
         {
+            Name = name;
             byte[] buffer = new byte[stream.Length];
             stream.Position = 0;
             stream.Read(buffer);
@@ -16,12 +19,14 @@ namespace twitterXcrypto.imaging
             CvInvoke.Imdecode(buffer, ImreadModes.Color, Mat);
         }
 
-        public void Save(string path)
+        public string Save(DirectoryInfo directory)
         {
-            if (Path.GetExtension(path) != ".png")
-                throw new ArgumentException("only .png-extensions supported");
+            if (!directory.Exists)
+                throw new ArgumentException("Bad directory");
 
+            string path = Path.Combine(directory.FullName, Name + ".png");
             Mat.Save(path);
+            return path;
         }
     }
 }

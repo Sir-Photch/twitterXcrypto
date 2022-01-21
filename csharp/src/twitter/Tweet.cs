@@ -20,6 +20,12 @@ namespace twitterXcrypto.twitter
 
             foreach (var uri in PictureUris)
             {
+                string imageName = "image";
+                if (uri.Segments.Any())
+                {
+                    imageName = Path.GetFileNameWithoutExtension(uri.Segments.Last());
+                }
+
                 using var response = await client.GetAsync(uri);
                 try
                 {
@@ -28,7 +34,8 @@ namespace twitterXcrypto.twitter
                 catch { continue; }
 
                 using Stream s = await response.Content.ReadAsStreamAsync();
-                yield return new Image(s);
+
+                yield return new Image(s, imageName);
             }
         }
 
