@@ -1,5 +1,4 @@
-﻿using System.Linq;
-
+﻿
 namespace twitterXcrypto.util
 {
     internal static class EnumerableExtensions
