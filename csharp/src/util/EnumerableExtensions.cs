@@ -22,5 +22,15 @@ namespace twitterXcrypto.util
             }
             return true;
         } 
+
+        internal static bool ContainsEveryKey<TKey,TValue>(this IDictionary<TKey,TValue> dict, IEnumerable<TKey> keys)
+        {
+            foreach (var key in keys)
+            {
+                if (!dict.ContainsKey(key))
+                    return false;
+            }
+            return true;
+        }
     }
 }

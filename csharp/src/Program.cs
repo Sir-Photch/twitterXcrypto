@@ -14,7 +14,17 @@ TwitterClient userClient = new(consumerKey: "1HqxAIikTtTkIF2FT1rAu5paw",
 IFilteredStream stream = userClient.Streams.CreateFilteredStream();
 
 UserWatcher watcher = new(userClient, stream);
-watcher.TweetReceived += (tweet) => Log.Write($"{tweet}");
+watcher.TweetReceived += async (tweet) => 
+{
+    Log.Write($"{tweet}");
+    if (tweet.ContainsImages)
+    {
+        await foreach (var pic in tweet.GetImages())
+        {
+            pic.Save(@"C:\Users\chris\Desktop\"+DateTime.Now.Millisecond+".png");
+        }
+    }
+};
 bool success = await watcher.AddUser(usersToWatch);
 
 watcher.StartWatching();
