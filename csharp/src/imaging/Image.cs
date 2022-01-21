@@ -1,16 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Emgu.CV;
+using Emgu.CV.CvEnum;
 
 namespace twitterXcrypto.imaging
 {
     public class Image
     {
-        internal Image(Stream stream)
+        internal Mat Mat { get; } = new();
+
+        internal string Name { get; }
+
+        internal Image(Stream stream, string name)
         {
-            throw new NotImplementedException();
+            Name = name;
+            byte[] buffer = new byte[stream.Length];
+            stream.Position = 0;
+            stream.Read(buffer);
+
+            CvInvoke.Imdecode(buffer, ImreadModes.Color, Mat);
+        }
+
+        public string Save(DirectoryInfo directory)
+        {
+            if (!directory.Exists)
+                throw new ArgumentException("Bad directory");
+
+            string path = Path.Combine(directory.FullName, Name + ".png");
+            Mat.Save(path);
+            return path;
         }
     }
 }

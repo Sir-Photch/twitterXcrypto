@@ -1,6 +1,5 @@
 ﻿using Tweetinvi.Models;
 using twitterXcrypto.imaging;
-using twitterXcrypto.util;
 
 namespace twitterXcrypto.twitter
 {
@@ -9,18 +8,24 @@ namespace twitterXcrypto.twitter
         public DateTimeOffset Timestamp { get; init; }
         public string Text { get; init; }
         public User User { get; init; }
-        public bool ContainsPictures { get; init; }
+        public bool ContainsImages { get; init; }
         private Uri[]? PictureUris { get; init; }
 
-        public async IAsyncEnumerable<Image> GetImage()
+        public async IAsyncEnumerable<Image> GetImages()
         {
-            if (!ContainsPictures)
+            if (!ContainsImages)
                 throw new InvalidOperationException("Tweet contains no pictures");
 
             using HttpClient client = new();
 
             foreach (var uri in PictureUris)
             {
+                string imageName = "image";
+                if (uri.Segments.Any())
+                {
+                    imageName = Path.GetFileNameWithoutExtension(uri.Segments.Last());
+                }
+
                 using var response = await client.GetAsync(uri);
                 try
                 {
@@ -28,13 +33,15 @@ namespace twitterXcrypto.twitter
                 }
                 catch { continue; }
 
-                yield return new Image(await response.Content.ReadAsStreamAsync());
+                using Stream s = await response.Content.ReadAsStreamAsync();
+
+                yield return new Image(s, imageName);
             }
         }
 
         public override string ToString()
         {
-            return $"{User} at {Timestamp}: \"{Text}\"";
+            return $"[{User}]: \"{Text.ReplaceLineEndings().Replace(Environment.NewLine, "[-nl-] ")}\"";
         }
 
         internal static Tweet FromITweet(ITweet tweet)
@@ -50,7 +57,7 @@ namespace twitterXcrypto.twitter
                 },
                 Text = tweet.Text,
                 Timestamp = tweet.CreatedAt,
-                ContainsPictures = containsPics,
+                ContainsImages = containsPics,
 #pragma warning disable CS8604
                 PictureUris = containsPics ? tweet.Media.Select(entry => new Uri(entry.MediaURLHttps)).ToArray() : null
 #pragma warning restore CS8604
