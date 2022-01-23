@@ -1,10 +1,13 @@
 ﻿using Tweetinvi;
 using Tweetinvi.Streaming;
+using twitterXcrypto.text;
 using twitterXcrypto.twitter;
 using twitterXcrypto.util;
+using twitterXcrypto.crypto;
 
 string[] usersToWatch = { "EmKayMA", "elonmusk", "_christophernst", "iCryptoNetwork", "CryptoBusy" };
 string imageDirectory = Path.Combine(Environment.CurrentDirectory, "twixcry_images");
+string cryptoKeywordPath = @"C:\Users\chris\Desktop\cryptos.txt";
 
 DirectoryInfo imagedir = Directory.CreateDirectory(imageDirectory);
 TwitterClient userClient = new(consumerKey: "1HqxAIikTtTkIF2FT1rAu5paw",
@@ -12,11 +15,22 @@ TwitterClient userClient = new(consumerKey: "1HqxAIikTtTkIF2FT1rAu5paw",
                                accessToken: "1279713705773674502-B9I0HlC3eC6VvVBsCLsrDKL9xZl7F2",
                                accessSecret: "A0uxTuPai2f8I4p0cYHQQibgSEDRDbl7wfAf83BFX2zNG");
 IFilteredStream stream = userClient.Streams.CreateFilteredStream();
+KeywordFinder keywordFinder = new();
 
+await Coinmarketcap.GetCryptoIdentifiers(10);
+
+
+await keywordFinder.ReadKeywordsFromFileAsync(new FileInfo(cryptoKeywordPath));
 UserWatcher watcher = new(userClient, stream);
 watcher.TweetReceived += async (tweet) => 
 {
     Log.Write($"{tweet}");
+    string[] matches = keywordFinder.Match(tweet.Text);
+    if (matches.Any())
+    {
+        Log.Write($"\tFound tokens: {string.Join(',', matches)}");
+    }
+    // crashes on linux-arm
     if (tweet.ContainsImages)
     {
         await foreach (var pic in tweet.GetImages())

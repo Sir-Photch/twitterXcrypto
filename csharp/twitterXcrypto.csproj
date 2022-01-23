@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>none</DebugType>
+    <DebugType>full</DebugType>
     <LangVersion>latest</LangVersion>
     <Platforms>AnyCPU;x64;ARM64</Platforms>
   </PropertyGroup>
