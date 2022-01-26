@@ -14,11 +14,11 @@ namespace twitterXcrypto.twitter
         private readonly Dictionary<long, User> _users = new();
         private bool _isWatching = false;
         private readonly AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
-        private CancellationTokenSource _tokenSource;
+        private CancellationTokenSource? _tokenSource;
         #endregion
 
         #region ctor
-        public UserWatcher(TwitterClient client, IFilteredStream stream) // 5MB default
+        public UserWatcher(TwitterClient client, IFilteredStream stream)
         {
             _stream = stream;
             _client = client; 

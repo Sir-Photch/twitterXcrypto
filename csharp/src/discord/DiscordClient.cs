@@ -52,6 +52,7 @@ internal class DiscordClient
         LogSeverity.Info => Log.LogLevel.INF,
         LogSeverity.Warning => Log.LogLevel.WRN,
         LogSeverity.Error => Log.LogLevel.ERR,
-        LogSeverity.Critical => Log.LogLevel.FTL
+        LogSeverity.Critical => Log.LogLevel.FTL,
+        _ => throw new NotImplementedException(discordSeverity.ToString())
     };
 }

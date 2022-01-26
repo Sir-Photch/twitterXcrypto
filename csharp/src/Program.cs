@@ -8,16 +8,22 @@ using static twitterXcrypto.util.EnvironmentVariables;
 string[] usersToWatch = { "EmKayMA", "elonmusk", "_christophernst", "iCryptoNetwork", "CryptoBusy" };
 string imageDirectory = Path.Combine(Environment.CurrentDirectory, "twixcry_images");
 
+if (Tokens.Values.Any(x => x is null))
+{
+    Log.Write($"Environment-variables are not configured:{Environment.NewLine}\t{string.Join(Environment.NewLine + "\t", Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key))}");
+    Environment.Exit(1);
+}
+
 DirectoryInfo imagedir = Directory.CreateDirectory(imageDirectory);
 TwitterClient userClient = new(Tokens[TWITTER_CONSUMERKEY],
                                Tokens[TWITTER_CONSUMERSECRET],
                                Tokens[TWITTER_ACCESSTOKEN],
                                Tokens[TWITTER_ACCESSSECRET]);
 IFilteredStream stream = userClient.Streams.CreateFilteredStream();
-DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID]));
+DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 11ff
 
 UserWatcher watcher = new(userClient, stream);
-watcher.TweetReceived += async (tweet) => 
+watcher.TweetReceived += async (tweet) =>
 {
     Log.Write($"{tweet}");
     if (tweet.User.Name == "Elon Musk")
