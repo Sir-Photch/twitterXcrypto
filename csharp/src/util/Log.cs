@@ -104,6 +104,12 @@ namespace twitterXcrypto.util
                     break;
             }
         }
+
+        public static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
+            => Task.Run(() => Write(message, level));
+
+        public static Task WriteAsync(string message, Exception e, LogLevel level = LogLevel.ERR)
+            => Task.Run(() => Write(message, e, level));
         #endregion
     }
 }

@@ -28,5 +28,16 @@ namespace twitterXcrypto.imaging
             Mat.Save(path);
             return path;
         }
+
+        public void Save(Stream stream)
+        {
+            if (stream is null)
+                throw new ArgumentNullException(nameof(stream));
+
+            stream.Position = 0;
+            byte[] bytes = CvInvoke.Imencode(".png", Mat);
+
+            stream.Write(bytes, 0, bytes.Length);
+        }
     }
 }
