@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using Serilog;
+using twitterXcrypto.twitter;
 
 namespace twitterXcrypto.util
 {
@@ -34,7 +35,8 @@ namespace twitterXcrypto.util
 
             LogPath = Path.Combine(logDir.FullName, "twixcry.log");
 
-            _logger = new LoggerConfiguration().WriteTo.Console()
+            _logger = new LoggerConfiguration().MinimumLevel.Verbose()
+                                               .WriteTo.Console()
                                                .WriteTo.File(path: LogPath,
                                                              rollingInterval: RollingInterval.Infinite,
                                                              outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
@@ -104,6 +106,15 @@ namespace twitterXcrypto.util
                     break;
             }
         }
+
+        public static void Write(Tweet tweet) => _logger.Verbose(tweet.ToString());
+
+        public static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
+            => Task.Run(() => Write(message, level));
+
+        public static Task WriteAsync(string message, Exception e, LogLevel level = LogLevel.ERR)
+            => Task.Run(() => Write(message, e, level));
+
         #endregion
     }
 }

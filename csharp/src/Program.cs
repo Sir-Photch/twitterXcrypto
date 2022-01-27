@@ -1,25 +1,38 @@
 ﻿using Tweetinvi;
 using Tweetinvi.Streaming;
+using twitterXcrypto.discord;
 using twitterXcrypto.twitter;
 using twitterXcrypto.util;
+using static twitterXcrypto.util.EnvironmentVariables;
 
-string[] usersToWatch = { "EmKayMA", "elonmusk", "_christophernst", "iCryptoNetwork", "CryptoBusy" };
 string imageDirectory = Path.Combine(Environment.CurrentDirectory, "twixcry_images");
 
+if (Tokens.Values.Any(x => x is null) || UsersToFollow is null)
+{
+    Log.Write($"Environment-variables are not configured:" +
+        $"{Environment.NewLine}\t" +
+        $"{string.Join(Environment.NewLine + "\t", Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key))}" +
+        $"{(UsersToFollow is null ? Environment.NewLine + USERS_TO_FOLLOW : string.Empty)}");
+    Environment.Exit(1);
+}
+
 DirectoryInfo imagedir = Directory.CreateDirectory(imageDirectory);
-TwitterClient userClient = new(consumerKey: "1HqxAIikTtTkIF2FT1rAu5paw",
-                               consumerSecret: "IQ8INgkQshPTvdZPc11tedNOMKjihMdT0V3vnu5WsqF5ZrFpI4",
-                               accessToken: "1279713705773674502-B9I0HlC3eC6VvVBsCLsrDKL9xZl7F2",
-                               accessSecret: "A0uxTuPai2f8I4p0cYHQQibgSEDRDbl7wfAf83BFX2zNG");
+TwitterClient userClient = new(Tokens[TWITTER_CONSUMERKEY],
+                               Tokens[TWITTER_CONSUMERSECRET],
+                               Tokens[TWITTER_ACCESSTOKEN],
+                               Tokens[TWITTER_ACCESSSECRET]);
 IFilteredStream stream = userClient.Streams.CreateFilteredStream();
+DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 11ff
 
 UserWatcher watcher = new(userClient, stream);
-watcher.TweetReceived += async (tweet) => 
+watcher.TweetReceived += async (tweet) =>
 {
-    Log.Write($"{tweet}");
+    Log.Write(tweet);
+    await discordClient.WriteAsync(tweet);
     if (tweet.ContainsImages)
     {
-        await foreach (var pic in tweet.GetImages())
+        var pics = tweet.GetImages();
+        await pics.ForEachAsync(pic =>
         {
             try
             {
@@ -30,15 +43,17 @@ watcher.TweetReceived += async (tweet) =>
             {
                 Log.Write("Error saving picture", e);
             }
-        }
+        });
     }
 };
-bool success = await watcher.AddUser(usersToWatch);
+bool success = await watcher.AddUser(UsersToFollow.ToArray());
 
+await discordClient.Connect(Tokens[DISCORD_TOKEN]);
 watcher.StartWatching();
 
 while (Console.ReadKey().KeyChar != 'q') ;
 
 watcher.StopWatching();
+await discordClient.Disconnect();
 
 Environment.Exit(0);

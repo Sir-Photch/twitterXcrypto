@@ -1,5 +1,6 @@
 ﻿using Tweetinvi.Models;
 using twitterXcrypto.imaging;
+using twitterXcrypto.util;
 
 namespace twitterXcrypto.twitter
 {
@@ -13,7 +14,7 @@ namespace twitterXcrypto.twitter
 
         public async IAsyncEnumerable<Image> GetImages()
         {
-            if (!ContainsImages)
+            if (PictureUris is null || PictureUris.Empty())
                 throw new InvalidOperationException("Tweet contains no pictures");
 
             using HttpClient client = new();
