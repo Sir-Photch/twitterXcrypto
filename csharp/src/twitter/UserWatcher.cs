@@ -21,7 +21,7 @@ namespace twitterXcrypto.twitter
         public UserWatcher(TwitterClient client, IFilteredStream stream)
         {
             _stream = stream;
-            _client = client; 
+            _client = client;
         }
         #endregion
 
@@ -60,15 +60,15 @@ namespace twitterXcrypto.twitter
                     try
                     {
                         TweetReceived?.Invoke(Tweet.FromITweet(tweet));
-                    } 
+                    }
                     catch { }
-                }                  
+                }
             });
             // task streaming twitter
             Task.Run(_stream.StartMatchingAnyConditionAsync);
 
             _isWatching = true;
-            Log.Write($"Started watching {_users.Count} users");
+            Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
         }
 
         public void StopWatching()
@@ -177,7 +177,7 @@ namespace twitterXcrypto.twitter
         #region private methods
 
         private void OnStreamStopped(object? sender, Tweetinvi.Events.StreamStoppedEventArgs e)
-        {            
+        {
             if (e.Exception is not null)
             {
                 Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, WRN);

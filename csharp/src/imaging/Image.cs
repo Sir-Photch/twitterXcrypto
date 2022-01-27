@@ -11,7 +11,7 @@ namespace twitterXcrypto.imaging
 
         internal Image(Stream stream, string name)
         {
-            Name = name;
+            Name = name + ".png";
             byte[] buffer = new byte[stream.Length];
             stream.Position = 0;
             stream.Read(buffer);
@@ -24,7 +24,7 @@ namespace twitterXcrypto.imaging
             if (!directory.Exists)
                 throw new ArgumentException("Bad directory");
 
-            string path = Path.Combine(directory.FullName, Name + ".png");
+            string path = Path.Combine(directory.FullName, Name);
             Mat.Save(path);
             return path;
         }
@@ -38,6 +38,7 @@ namespace twitterXcrypto.imaging
             byte[] bytes = CvInvoke.Imencode(".png", Mat);
 
             stream.Write(bytes, 0, bytes.Length);
+            stream.Position = 0;
         }
     }
 }

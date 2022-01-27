@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using twitterXcrypto.twitter;
 using twitterXcrypto.util;
 
 namespace twitterXcrypto.discord;
@@ -11,6 +12,7 @@ internal class DiscordClient
 
     internal DiscordClient(ulong channelId)
     {
+        _channelId = channelId;
         _client = new DiscordSocketClient();
         _client.Log += msg => Task.Run(() => Log.Write(msg.Message, msg.Exception, ToLogLevel(msg.Severity)));
         _client.Connected += () => Log.WriteAsync("Connected to Discord!");
@@ -30,13 +32,29 @@ internal class DiscordClient
         await channel.SendMessageAsync(message);
     }
 
+    public async Task WriteAsync(Tweet tweet)
+    {
+        ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
+        await channel.SendMessageAsync(text: tweet.ToString());
+
+        if (tweet.ContainsImages)
+        {
+            await tweet.GetImages().ForEachAsync(async img =>
+            {
+                using MemoryStream ms = new();
+                img.Save(ms);
+                await channel.SendFileAsync(ms, img.Name);
+            });
+        }
+    }
+
     public async Task WriteAsync(string message, imaging.Image image)
     {
         ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
 
         using MemoryStream ms = new();
         image.Save(ms);
-        await channel.SendFileAsync(ms, image.Name, message);
+        await channel.SendFileAsync(ms, image.Name+".png", message);
     }
 
     public async Task Disconnect()

@@ -5,12 +5,14 @@ using twitterXcrypto.twitter;
 using twitterXcrypto.util;
 using static twitterXcrypto.util.EnvironmentVariables;
 
-string[] usersToWatch = { "EmKayMA", "elonmusk", "_christophernst", "iCryptoNetwork", "CryptoBusy" };
 string imageDirectory = Path.Combine(Environment.CurrentDirectory, "twixcry_images");
 
-if (Tokens.Values.Any(x => x is null))
+if (Tokens.Values.Any(x => x is null) || UsersToFollow is null)
 {
-    Log.Write($"Environment-variables are not configured:{Environment.NewLine}\t{string.Join(Environment.NewLine + "\t", Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key))}");
+    Log.Write($"Environment-variables are not configured:" +
+        $"{Environment.NewLine}\t" +
+        $"{string.Join(Environment.NewLine + "\t", Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key))}" +
+        $"{(UsersToFollow is null ? Environment.NewLine + USERS_TO_FOLLOW : string.Empty)}");
     Environment.Exit(1);
 }
 
@@ -25,22 +27,12 @@ DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wo
 UserWatcher watcher = new(userClient, stream);
 watcher.TweetReceived += async (tweet) =>
 {
-    Log.Write($"{tweet}");
-    if (tweet.User.Name == "Elon Musk")
-    {
-        try
-        {
-            await discordClient.WriteAsync("Musk has spoken\n" + tweet.Text);
-        }
-        catch (Exception e)
-        {
-            Log.Write("Could not write message to discord", e);
-        }
-    }
+    Log.Write(tweet);
+    await discordClient.WriteAsync(tweet);
     if (tweet.ContainsImages)
     {
-        int pictureIndex = 1;
-        await foreach (var pic in tweet.GetImages())
+        var pics = tweet.GetImages();
+        await pics.ForEachAsync(pic =>
         {
             try
             {
@@ -51,21 +43,10 @@ watcher.TweetReceived += async (tweet) =>
             {
                 Log.Write("Error saving picture", e);
             }
-            if (tweet.User.Name == "Elon Musk")
-            {
-                try
-                {
-                    await discordClient.WriteAsync($"Pic {pictureIndex++}", pic);
-                }
-                catch (Exception e)
-                {
-                    Log.Write("Could not write picture to discord", e);
-                }
-            }
-        }
+        });
     }
 };
-bool success = await watcher.AddUser(usersToWatch);
+bool success = await watcher.AddUser(UsersToFollow.ToArray());
 
 await discordClient.Connect(Tokens[DISCORD_TOKEN]);
 watcher.StartWatching();

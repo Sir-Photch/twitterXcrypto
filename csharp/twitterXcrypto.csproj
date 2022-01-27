@@ -6,9 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>none</DebugType>
+    <DebugType>portable</DebugType>
     <LangVersion>latest</LangVersion>
-    <Platforms>AnyCPU;x64;ARM64</Platforms>
+    <Platforms>AnyCPU;x64;ARM64;ARM32</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
