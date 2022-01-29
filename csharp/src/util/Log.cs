@@ -38,8 +38,7 @@ namespace twitterXcrypto.util
             LogPath = Path.Combine(logDir.FullName, "twixcry.log");
 
             _logger = new LoggerConfiguration().MinimumLevel.Verbose()
-                                               .WriteTo.Console(
-                                                                outputTemplate: OUTPUT_TEMPLATE)
+                                               .WriteTo.Console(outputTemplate: OUTPUT_TEMPLATE)
                                                .WriteTo.File(path: LogPath,
                                                              rollingInterval: RollingInterval.Infinite,
                                                              outputTemplate: OUTPUT_TEMPLATE,
