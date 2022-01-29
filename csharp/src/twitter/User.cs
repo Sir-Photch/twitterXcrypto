@@ -1,6 +1,6 @@
 ﻿namespace twitterXcrypto.twitter;
 
-public struct User : IEquatable<User>
+internal struct User : IEquatable<User>
 {
     internal string Name { get; init; }
     internal long Id { get; init; }

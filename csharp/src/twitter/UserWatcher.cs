@@ -18,7 +18,7 @@ internal class UserWatcher
     #endregion
 
     #region ctor
-    public UserWatcher(TwitterClient client, IFilteredStream stream)
+    internal UserWatcher(TwitterClient client, IFilteredStream stream)
     {
         _stream = stream;
         _client = client;
@@ -27,17 +27,17 @@ internal class UserWatcher
 
     #region properties
 
-    public IEnumerable<User> Users => _users.Values;
+    internal IEnumerable<User> Users => _users.Values;
 
-    public bool IsWatching => _isWatching;
+    internal bool IsWatching => _isWatching;
 
-    public event Action<Tweet>? TweetReceived;
+    internal event Action<Tweet>? TweetReceived;
 
     #endregion
 
     #region methods
 
-    public void StartWatching()
+    internal void StartWatching()
     {
         if (IsWatching) return;
 
@@ -71,19 +71,19 @@ internal class UserWatcher
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
     }
 
-    public void StopWatching()
+    internal void StopWatching()
     {
         if (!IsWatching) return;
 
         _stream.Stop();
-        _tokenSource.Cancel();
+        _tokenSource?.Cancel();
         _stream.StreamStopped -= OnStreamStopped;
         _stream.MatchingTweetReceived -= OnMatchingTweetReceived;
         _isWatching = false;
         Log.Write("Stopped watching");
     }
 
-    public async Task<bool> AddUser(string username)
+    internal async Task<bool> AddUser(string username)
     {
         IUser iUser;
         try
@@ -107,7 +107,7 @@ internal class UserWatcher
         return true;
     }
 
-    public async Task<bool> AddUser(string[] usernames)
+    internal async Task<bool> AddUser(string[] usernames)
     {
         IUser[] iUsers;
         try
@@ -134,7 +134,7 @@ internal class UserWatcher
         return true;
     }
 
-    public async Task<bool> RemoveUser(string username)
+    internal async Task<bool> RemoveUser(string username)
     {
         IUser iUser;
         try
@@ -151,7 +151,7 @@ internal class UserWatcher
             return _users.Remove(iUser.Id);
     }
 
-    public async Task<bool> RemoveUser(string[] usernames)
+    internal async Task<bool> RemoveUser(string[] usernames)
     {
         IUser[] iUsers;
         try

@@ -49,7 +49,7 @@ internal static class Log
     #endregion
 
     #region enum loglevel
-    public enum LogLevel
+    internal enum LogLevel
     {
         VRB,
         DBG,
@@ -61,7 +61,7 @@ internal static class Log
     #endregion
 
     #region methods
-    public static void Write(string message, LogLevel level = LogLevel.INF)
+    internal static void Write(string message, LogLevel level = LogLevel.INF)
     {
         switch (level)
         {
@@ -86,7 +86,7 @@ internal static class Log
         }
     }
 
-    public static void Write(string message, Exception e, LogLevel level = LogLevel.ERR)
+    internal static void Write(string message, Exception e, LogLevel level = LogLevel.ERR)
     {
         switch (level)
         {
@@ -111,12 +111,12 @@ internal static class Log
         }
     }
 
-    public static void Write(Tweet tweet) => _logger.ForContext("TweetUserName", $" [{tweet.User.Name}]:").Verbose(tweet.ToString(replaceLineEndings: true));
+    internal static void Write(Tweet tweet) => _logger.ForContext("TweetUserName", $" [{tweet.User.Name}]:").Verbose(tweet.ToString(replaceLineEndings: true));
 
-    public static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
+    internal static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
         => Task.Run(() => Write(message, level));
 
-    public static Task WriteAsync(string message, Exception e, LogLevel level = LogLevel.ERR)
+    internal static Task WriteAsync(string message, Exception e, LogLevel level = LogLevel.ERR)
         => Task.Run(() => Write(message, e, level));
 
     #endregion

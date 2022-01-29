@@ -5,15 +5,15 @@ using twitterXcrypto.util;
 
 namespace twitterXcrypto.twitter;
 
-public struct Tweet
+internal struct Tweet
 {
-    public DateTimeOffset Timestamp { get; init; }
-    public string Text { get; init; }
-    public User User { get; init; }
-    public bool ContainsImages { get; init; }
-    private Uri[]? PictureUris { get; init; }
+    internal DateTimeOffset Timestamp { get; init; }
+    internal string Text { get; init; }
+    internal User User { get; init; }
+    internal bool ContainsImages { get; init; }
+    internal Uri[]? PictureUris { get; init; }
 
-    public async IAsyncEnumerable<Image> GetImages()
+    internal async IAsyncEnumerable<Image> GetImages()
     {
         if (PictureUris is null || PictureUris.Empty())
             throw new InvalidOperationException("Tweet contains no pictures");
@@ -43,7 +43,7 @@ public struct Tweet
 
     public override string ToString() => ToString(true, true, @" \n ");
 
-    public string ToString(
+    internal string ToString(
         bool replaceLineEndings = false,
         bool prependUser = false,
         string lineEndingReplacement = " ")

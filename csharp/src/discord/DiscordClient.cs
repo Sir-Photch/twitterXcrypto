@@ -20,19 +20,19 @@ internal class DiscordClient
         _client.Ready += () => Log.WriteAsync("Discord-Bot ready!");
     }
 
-    public async Task Connect(string token)
+    internal async Task Connect(string token)
     {
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
     }
 
-    public async Task WriteAsync(string message)
+    internal async Task WriteAsync(string message)
     {
         ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
         await channel.SendMessageAsync(message);
     }
 
-    public async Task WriteAsync(Tweet tweet)
+    internal async Task WriteAsync(Tweet tweet)
     {
         ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
         await channel.SendMessageAsync(
@@ -47,12 +47,13 @@ internal class DiscordClient
             {
                 using MemoryStream ms = new();
                 img.Save(ms);
+                ms.Position = 0L;
                 await channel.SendFileAsync(ms, img.Name);
             });
         }
     }
 
-    public async Task Disconnect()
+    internal async Task Disconnect()
     {
         await _client.StopAsync();
         await _client.LogoutAsync();

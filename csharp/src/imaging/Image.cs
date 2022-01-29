@@ -3,7 +3,7 @@ using Emgu.CV.CvEnum;
 
 namespace twitterXcrypto.imaging;
 
-public class Image
+internal class Image
 {
     internal Mat Mat { get; } = new();
 
@@ -19,7 +19,7 @@ public class Image
         CvInvoke.Imdecode(buffer, ImreadModes.Color, Mat);
     }
 
-    public string Save(DirectoryInfo directory)
+    internal string Save(DirectoryInfo directory)
     {
         if (!directory.Exists)
             throw new ArgumentException("Bad directory");
@@ -29,16 +29,15 @@ public class Image
         return path;
     }
 
-    public void Save(Stream stream)
+    internal void Save(Stream stream)
     {
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
-        stream.Position = 0;
+        stream.Position = 0L;
         byte[] bytes = CvInvoke.Imencode(".png", Mat);
 
         stream.Write(bytes, 0, bytes.Length);
-        stream.Position = 0;
     }
 }
 
