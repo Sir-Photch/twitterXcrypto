@@ -9,15 +9,26 @@ using static twitterXcrypto.util.EnvironmentVariables;
 
 try
 {
+    var missingVariables = Check();
+    if (missingVariables.Any())
+    {
+        Log.Write($"Environment-variables are not configured:{Environment.NewLine}{string.Join(Environment.NewLine, missingVariables)}");
+        Environment.Exit(1);
+    }
+
     string imageDirectory = Path.Combine(Environment.CurrentDirectory, "twixcry_images");
 
-    if (Tokens.Values.Any(x => x is null) || UsersToFollow is null)
+    CoinmarketcapClient coinClient = new(Tokens[XCMC_PRO_API_KEY]) { NumAssetsToGet = (uint)NumAsssetsToWatch };
+    KeywordFinder? keywordFinder = null;
+    try
     {
-        Log.Write($"Environment-variables are not configured:" +
-            $"{Environment.NewLine}\t" +
-            $"{string.Join(Environment.NewLine + "\t", Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key))}" +
-            $"{(UsersToFollow is null ? Environment.NewLine + USERS_TO_FOLLOW : string.Empty)}");
-        Environment.Exit(1);
+        await coinClient.RefreshAssets();
+        keywordFinder = new();
+        keywordFinder.ReadKeywords(coinClient.Assets.Select(asset => (asset.Symbol, asset.Name)));
+    }
+    catch (Exception e)
+    {
+        Log.Write("Could not read assets from coinmarketbase", e);
     }
 
     DirectoryInfo imagedir = Directory.CreateDirectory(imageDirectory);
@@ -32,22 +43,34 @@ try
     watcher.TweetReceived += async (tweet) =>
     {
         Log.Write(tweet);
-        await discordClient.WriteAsync(tweet);
-        if (tweet.ContainsImages)
+
+        string[]? matches = keywordFinder?.Match(tweet.Text);
+        bool writeTweet = matches is null || matches.Any();
+
+        if (writeTweet)
         {
-            var pics = tweet.GetImages();
-            await pics.ForEachAsync(pic =>
+            await discordClient.WriteAsync(tweet);
+            if (tweet.ContainsImages)
             {
-                try
+                var pics = tweet.GetImages();
+                await pics.ForEachAsync(pic =>
                 {
-                    string path = pic.Save(imagedir);
-                    Log.Write($"Saved picture to {path}");
-                }
-                catch (Exception e)
-                {
-                    Log.Write("Error saving picture", e);
-                }
-            });
+                    try
+                    {
+                        string path = pic.Save(imagedir);
+                        Log.Write($"Saved picture to {path}");
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Write("Error saving picture", e);
+                    }
+                });
+            }
+            if (matches is not null && matches.Any())
+            {
+                var assetsFound = coinClient.Assets.Where(asset => matches.Contains(asset.Name)).Select(asset => asset.ToString(true));
+                await discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound)}");
+            }
         }
     };
     bool success = await watcher.AddUser(UsersToFollow.ToArray());

@@ -9,11 +9,26 @@ internal static class EnvironmentVariables
         TWITTER_ACCESSSECRET = nameof(TWITTER_ACCESSSECRET),
         DISCORD_TOKEN = nameof(DISCORD_TOKEN),
         DISCORD_CHANNELID = nameof(DISCORD_CHANNELID),
-        USERS_TO_FOLLOW = nameof(USERS_TO_FOLLOW);
+        USERS_TO_FOLLOW = nameof(USERS_TO_FOLLOW),
+        XCMC_PRO_API_KEY = nameof(XCMC_PRO_API_KEY),
+        NUM_ASSETS_TO_WATCH = nameof(NUM_ASSETS_TO_WATCH);
 
     internal static IReadOnlyDictionary<string, string?> Tokens => _tokens;
-
     internal static IEnumerable<string>? UsersToFollow => _usersToFollow;
+    internal static int NumAsssetsToWatch => _numAssetsToWatch;
+
+    internal static IEnumerable<string> Check()
+    {
+        List<string> missingVariables = new();
+
+        missingVariables.AddRange(Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key));
+        if (UsersToFollow is null)
+            missingVariables.Add(USERS_TO_FOLLOW);
+        if (NumAsssetsToWatch is -1)
+            missingVariables.Add(NUM_ASSETS_TO_WATCH);
+
+        return missingVariables;
+    }
 
     static EnvironmentVariables()
     {
@@ -23,12 +38,16 @@ internal static class EnvironmentVariables
         _tokens[TWITTER_ACCESSSECRET] = Environment.GetEnvironmentVariable(TWITTER_ACCESSSECRET);
         _tokens[DISCORD_TOKEN] = Environment.GetEnvironmentVariable(DISCORD_TOKEN);
         _tokens[DISCORD_CHANNELID] = Environment.GetEnvironmentVariable(DISCORD_CHANNELID);
+        _tokens[XCMC_PRO_API_KEY] = Environment.GetEnvironmentVariable(XCMC_PRO_API_KEY);
+
+        string? numAssetsToWatchString = Environment.GetEnvironmentVariable(NUM_ASSETS_TO_WATCH);
+        int.TryParse(numAssetsToWatchString, out _numAssetsToWatch);
 
         string? usersToFollowConcatenated = Environment.GetEnvironmentVariable(USERS_TO_FOLLOW);
         _usersToFollow = usersToFollowConcatenated?.Split(',');
     }
 
     private static readonly Dictionary<string, string?> _tokens = new();
-
     private static readonly string[]? _usersToFollow;
+    private static readonly int _numAssetsToWatch = -1;
 }
