@@ -24,7 +24,7 @@ internal static class EnvironmentVariables
         missingVariables.AddRange(Tokens.Where(tkn => tkn.Value is null).Select(tkn => tkn.Key));
         if (UsersToFollow is null)
             missingVariables.Add(USERS_TO_FOLLOW);
-        if (NumAsssetsToWatch is -1)
+        if (NumAsssetsToWatch == -1)
             missingVariables.Add(NUM_ASSETS_TO_WATCH);
 
         return missingVariables;
@@ -41,7 +41,11 @@ internal static class EnvironmentVariables
         _tokens[XCMC_PRO_API_KEY] = Environment.GetEnvironmentVariable(XCMC_PRO_API_KEY);
 
         string? numAssetsToWatchString = Environment.GetEnvironmentVariable(NUM_ASSETS_TO_WATCH);
-        int.TryParse(numAssetsToWatchString, out _numAssetsToWatch);
+        try
+        {
+            _numAssetsToWatch = int.Parse(numAssetsToWatchString);
+        }
+        catch { }
 
         string? usersToFollowConcatenated = Environment.GetEnvironmentVariable(USERS_TO_FOLLOW);
         _usersToFollow = usersToFollowConcatenated?.Split(',');

@@ -68,7 +68,14 @@ try
             }
             if (matches is not null && matches.Any())
             {
-                await coinClient.RefreshAssets();
+                try
+                {
+                    await coinClient.RefreshAssets();
+                }
+                catch (Exception e)
+                {
+                    Log.Write("Could not read assets from coinmarketbase", e);
+                }
                 var assetsFound = coinClient.Assets.Where(asset => matches.Contains(asset.Name)).Select(asset => asset.ToString(true));
                 await discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound)}");
             }
