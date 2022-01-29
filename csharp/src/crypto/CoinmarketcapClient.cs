@@ -22,7 +22,7 @@ internal class CoinmarketcapClient
         internal double PercentChange1h { get; init; }
 
         public override string ToString() => ToString(false);
-        
+
         public string ToString(bool withLineBreaks)
         {
             StringBuilder sb = new();
@@ -97,36 +97,39 @@ internal class CoinmarketcapClient
         if (items.Empty())
             return;
 
-        await Parallel.ForEachAsync(items, (item, token) =>
+        await Parallel.ForEachAsync(items.Chunk(Environment.ProcessorCount), (chunk, token) =>
         {
             if (token.IsCancellationRequested)
                 return ValueTask.FromCanceled(token);
 
-            string name, symbol;
-            double price, percentChange1h;
-            try
+            foreach (var item in chunk)
             {
-                name = item.Element("name").Value;
-                symbol = item.Element("symbol").Value;
+                string name, symbol;
+                double price, percentChange1h;
+                try
+                {
+                    name = item.Element("name").Value;
+                    symbol = item.Element("symbol").Value;
 
-                NumberStyles parseStyle = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
+                    NumberStyles parseStyle = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
 
-                XElement? quote = item.Element("quote").Element("USD");
+                    XElement? quote = item.Element("quote").Element("USD");
 
-                string priceString = quote.Element("price").Value;
-                string percentString = quote.Element("percent_change_1h").Value;
+                    string priceString = quote.Element("price").Value;
+                    string percentString = quote.Element("percent_change_1h").Value;
 
-                price = double.Parse(priceString, parseStyle, CultureInfo.InvariantCulture);
-                percentChange1h = double.Parse(percentString, parseStyle, CultureInfo.InvariantCulture);
+                    price = double.Parse(priceString, parseStyle, CultureInfo.InvariantCulture);
+                    percentChange1h = double.Parse(percentString, parseStyle, CultureInfo.InvariantCulture);
 #pragma warning restore CS8602
-            }
-            catch (Exception ex)
-            {
-                return ValueTask.FromException(ex);
-            }
+                }
+                catch (Exception ex)
+                {
+                    return ValueTask.FromException(ex);
+                }
 
-            lock (_assets)
-                _assets.AddReplace(new Asset { Name = name, Symbol = symbol, PercentChange1h = percentChange1h, Price = price });
+                lock (_assets)
+                    _assets.AddReplace(new Asset { Name = name, Symbol = symbol, PercentChange1h = percentChange1h, Price = price });
+            }
 
             return ValueTask.CompletedTask;
         });

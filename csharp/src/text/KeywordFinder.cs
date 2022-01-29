@@ -16,20 +16,23 @@ internal class KeywordFinder
 
     internal string[] Match(string text)
     {
-        ConcurrentBag<string> result = new();
+        HashSet<string> matches = new();
 
-        Parallel.ForEach(_keywordMap.Keys.Chunk(Environment.ProcessorCount), 
-        keywordChunk =>
+        Parallel.ForEach(_keywordMap.Chunk(Environment.ProcessorCount), 
+        chunk =>
         {
-            for (int i = 0; i < keywordChunk.Length; i++)
+            foreach (var kvp in chunk)
             {
-                if (text.ToLower().Contains(keywordChunk[i]))
+                string lower = text.ToLowerInvariant();
+                if (lower.Contains(kvp.Key.ToLowerInvariant()) 
+                 || lower.Contains(kvp.Value.ToLowerInvariant()))
                 {
-                    result.Add(_keywordMap[keywordChunk[i]]);
+                    lock (matches)
+                        matches.Add(kvp.Value);
                 }
             }
         });
 
-        return result.ToArray();
+        return matches.ToArray();
     }
 }

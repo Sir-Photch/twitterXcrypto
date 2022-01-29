@@ -68,6 +68,7 @@ try
             }
             if (matches is not null && matches.Any())
             {
+                await coinClient.RefreshAssets();
                 var assetsFound = coinClient.Assets.Where(asset => matches.Contains(asset.Name)).Select(asset => asset.ToString(true));
                 await discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound)}");
             }
