@@ -14,7 +14,7 @@ internal class DiscordClient
     {
         _channelId = channelId;
         _client = new DiscordSocketClient();
-        _client.Log += msg => Task.Run(() => Log.Write(msg.Message, msg.Exception, ToLogLevel(msg.Severity)));
+        _client.Log += msg => Log.WriteAsync(msg.Message, msg.Exception, ToLogLevel(msg.Severity));
         _client.Connected += () => Log.WriteAsync("Connected to Discord!");
         _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null ? Log.LogLevel.INF : Log.LogLevel.ERR);
         _client.Ready += () => Log.WriteAsync("Discord-Bot ready!");
@@ -35,7 +35,11 @@ internal class DiscordClient
     public async Task WriteAsync(Tweet tweet)
     {
         ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
-        await channel.SendMessageAsync(text: tweet.ToString());
+        await channel.SendMessageAsync(
+            tweet.ToString(
+                prependUser: true, 
+                replaceLineEndings: true, 
+                lineEndingReplacement: Environment.NewLine));
 
         if (tweet.ContainsImages)
         {
@@ -46,15 +50,6 @@ internal class DiscordClient
                 await channel.SendFileAsync(ms, img.Name);
             });
         }
-    }
-
-    public async Task WriteAsync(string message, imaging.Image image)
-    {
-        ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
-
-        using MemoryStream ms = new();
-        image.Save(ms);
-        await channel.SendFileAsync(ms, image.Name+".png", message);
     }
 
     public async Task Disconnect()

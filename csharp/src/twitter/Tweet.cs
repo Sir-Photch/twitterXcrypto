@@ -1,4 +1,5 @@
-﻿using Tweetinvi.Models;
+﻿using System.Text;
+using Tweetinvi.Models;
 using twitterXcrypto.imaging;
 using twitterXcrypto.util;
 
@@ -40,9 +41,19 @@ namespace twitterXcrypto.twitter
             }
         }
 
-        public override string ToString()
+        public override string ToString() => ToString(true, true, " <nl> ");
+
+        public string ToString(
+            bool replaceLineEndings = false,
+            bool prependUser = false,
+            string lineEndingReplacement = " ")
         {
-            return $"[{User}]: \"{Text.ReplaceLineEndings().Replace(Environment.NewLine, "[-nl-] ")}\"";
+            StringBuilder sb = new();
+            if (prependUser)
+                sb.Append($"[{User.Name}]:{Environment.NewLine}");
+
+            sb.Append($"\"{(replaceLineEndings ? Text.ReplaceLineEndings(lineEndingReplacement) : Text)}\"");
+            return sb.ToString();
         }
 
         internal static Tweet FromITweet(ITweet tweet)

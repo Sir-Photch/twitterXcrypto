@@ -107,7 +107,7 @@ namespace twitterXcrypto.util
             }
         }
 
-        public static void Write(Tweet tweet) => _logger.Verbose(tweet.ToString());
+        public static void Write(Tweet tweet) => _logger.ForContext(tweet.User.Name, true).Verbose(tweet.ToString(replaceLineEndings: true));
 
         public static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
             => Task.Run(() => Write(message, level));
