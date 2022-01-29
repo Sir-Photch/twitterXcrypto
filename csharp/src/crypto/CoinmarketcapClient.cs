@@ -29,10 +29,10 @@ internal class CoinmarketcapClient
 
             sb.Append($"[ {Symbol} | {Name} ]: ");
             if (withLineBreaks)
-                sb.Append(Environment.NewLine);
+                sb.Append($"{Environment.NewLine}\t");
             sb.Append($"Price: {Price}USD, ");
             if (withLineBreaks)
-                sb.Append(Environment.NewLine);
+                sb.Append($"{Environment.NewLine}\t");
             sb.Append($"1h change: {PercentChange1h}%");
 
             return sb.ToString();
