@@ -31,4 +31,10 @@ internal static class EnumerableExtensions
         }
         return true;
     }
+
+    internal static void AddReplace<T>(this HashSet<T> @this, T value)
+    {
+        @this.Remove(value);
+        @this.Add(value);
+    }
 }
