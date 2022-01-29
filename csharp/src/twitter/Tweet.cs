@@ -41,7 +41,7 @@ namespace twitterXcrypto.twitter
             }
         }
 
-        public override string ToString() => ToString(true, true, " <nl> ");
+        public override string ToString() => ToString(true, true, @" \n ");
 
         public string ToString(
             bool replaceLineEndings = false,
