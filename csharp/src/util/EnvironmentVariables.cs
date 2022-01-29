@@ -11,9 +11,9 @@ internal static class EnvironmentVariables
         DISCORD_CHANNELID = nameof(DISCORD_CHANNELID),
         USERS_TO_FOLLOW = nameof(USERS_TO_FOLLOW);
 
-    public static IReadOnlyDictionary<string, string?> Tokens => _tokens;
+    internal static IReadOnlyDictionary<string, string?> Tokens => _tokens;
 
-    public static IEnumerable<string>? UsersToFollow => _usersToFollow;
+    internal static IEnumerable<string>? UsersToFollow => _usersToFollow;
 
     static EnvironmentVariables()
     {

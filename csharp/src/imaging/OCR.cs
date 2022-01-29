@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Emgu.CV.OCR;
 
-namespace twitterXcrypto.src.imaging
+namespace twitterXcrypto.imaging
 {
     internal static class OCR
     {
