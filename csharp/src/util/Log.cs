@@ -37,11 +37,10 @@ namespace twitterXcrypto.util
             LogPath = Path.Combine(logDir.FullName, "twixcry.log");
 
             _logger = new LoggerConfiguration().MinimumLevel.Verbose()
-                                               .Enrich.FromLogContext()
                                                .WriteTo.Console()
                                                .WriteTo.File(path: LogPath,
                                                              rollingInterval: RollingInterval.Infinite,
-                                                             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                                                             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level:u3}] {TweetUserName} {Message:lj}{NewLine}{Exception}",
                                                              encoding: Encoding.Unicode,
                                                              shared: true)
                                                .CreateLogger();
@@ -111,7 +110,7 @@ namespace twitterXcrypto.util
             }
         }
 
-        public static void Write(Tweet tweet) => _logger.ForContext(tweet.User.Name, true).Verbose(tweet.ToString(replaceLineEndings: true));
+        public static void Write(Tweet tweet) => _logger.ForContext("TweetUserName", $"[{tweet.User.Name}]:").Verbose(tweet.ToString(replaceLineEndings: true));
 
         public static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
             => Task.Run(() => Write(message, level));
