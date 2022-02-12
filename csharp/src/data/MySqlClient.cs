@@ -102,6 +102,7 @@ namespace twitterXcrypto.data
 
         public void Dispose()
         {
+            _con.Close();
             _con.Dispose();
             GC.SuppressFinalize(this);
         }
@@ -109,6 +110,7 @@ namespace twitterXcrypto.data
         public async ValueTask DisposeAsync()
         {
             await _con.CloseAsync();
+            await _con.DisposeAsync();
             GC.SuppressFinalize(this);            
         }
 
