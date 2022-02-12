@@ -49,7 +49,7 @@ internal static class Log
     #endregion
 
     #region enum loglevel
-    internal enum LogLevel
+    internal enum Level
     {
         VRB,
         DBG,
@@ -61,51 +61,51 @@ internal static class Log
     #endregion
 
     #region methods
-    internal static void Write(string message, LogLevel level = LogLevel.INF)
+    internal static void Write(string message, Level level = Level.INF)
     {
         switch (level)
         {
-            case LogLevel.VRB:
+            case Level.VRB:
                 _logger.Verbose(message);
                 break;
-            case LogLevel.DBG:
+            case Level.DBG:
                 _logger.Debug(message);
                 break;
-            case LogLevel.INF:
+            case Level.INF:
                 _logger.Information(message);
                 break;
-            case LogLevel.WRN:
+            case Level.WRN:
                 _logger.Warning(message);
                 break;
-            case LogLevel.ERR:
+            case Level.ERR:
                 _logger.Error(message);
                 break;
-            case LogLevel.FTL:
+            case Level.FTL:
                 _logger.Fatal(message);
                 break;
         }
     }
 
-    internal static void Write(string message, Exception e, LogLevel level = LogLevel.ERR)
+    internal static void Write(string message, Exception e, Level level = Level.ERR)
     {
         switch (level)
         {
-            case LogLevel.VRB:
+            case Level.VRB:
                 _logger.Verbose(e, message);
                 break;
-            case LogLevel.DBG:
+            case Level.DBG:
                 _logger.Debug(e, message);
                 break;
-            case LogLevel.INF:
+            case Level.INF:
                 _logger.Information(e, message);
                 break;
-            case LogLevel.WRN:
+            case Level.WRN:
                 _logger.Warning(e, message);
                 break;
-            case LogLevel.ERR:
+            case Level.ERR:
                 _logger.Error(e, message);
                 break;
-            case LogLevel.FTL:
+            case Level.FTL:
                 _logger.Error(e, message);
                 break;
         }
@@ -113,10 +113,10 @@ internal static class Log
 
     internal static void Write(Tweet tweet) => _logger.ForContext("TweetUserName", $" [{tweet.User.Name}]:").Verbose(tweet.ToString(replaceLineEndings: true));
 
-    internal static Task WriteAsync(string message, LogLevel level = LogLevel.INF)
+    internal static Task WriteAsync(string message, Level level = Level.INF)
         => Task.Run(() => Write(message, level));
 
-    internal static Task WriteAsync(string message, Exception e, LogLevel level = LogLevel.ERR)
+    internal static Task WriteAsync(string message, Exception e, Level level = Level.ERR)
         => Task.Run(() => Write(message, e, level));
 
     #endregion

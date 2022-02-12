@@ -111,15 +111,13 @@ internal class CoinmarketcapClient
                     name = item.Element("name").Value;
                     symbol = item.Element("symbol").Value;
 
-                    NumberStyles parseStyle = NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint;
-
                     XElement? quote = item.Element("quote").Element("USD");
 
                     string priceString = quote.Element("price").Value;
                     string percentString = quote.Element("percent_change_1h").Value;
 
-                    price = double.Parse(priceString, parseStyle, CultureInfo.InvariantCulture);
-                    percentChange1h = double.Parse(percentString, parseStyle, CultureInfo.InvariantCulture);
+                    price = double.Parse(priceString, NumberStyles.Float, CultureInfo.InvariantCulture);
+                    percentChange1h = double.Parse(percentString, NumberStyles.Float, CultureInfo.InvariantCulture);
 #pragma warning restore CS8602
                 }
                 catch (Exception ex)

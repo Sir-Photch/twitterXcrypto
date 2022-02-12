@@ -2,7 +2,7 @@
 using Tweetinvi.Models;
 using Tweetinvi.Streaming;
 using twitterXcrypto.util;
-using static twitterXcrypto.util.Log.LogLevel;
+using static twitterXcrypto.util.Log.Level;
 
 namespace twitterXcrypto.twitter;
 

@@ -5,7 +5,7 @@ using twitterXcrypto.util;
 
 namespace twitterXcrypto.discord;
 
-internal class DiscordClient
+internal class DiscordClient : IAsyncDisposable, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ulong _channelId;
@@ -16,7 +16,7 @@ internal class DiscordClient
         _client = new DiscordSocketClient();
         _client.Log += msg => Log.WriteAsync(msg.Message, msg.Exception, ToLogLevel(msg.Severity));
         _client.Connected += () => Log.WriteAsync("Connected to Discord!");
-        _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null ? Log.LogLevel.INF : Log.LogLevel.ERR);
+        _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null ? Log.Level.INF : Log.Level.ERR);
         _client.Ready += () => Log.WriteAsync("Discord-Bot ready!");
     }
 
@@ -53,20 +53,28 @@ internal class DiscordClient
         }
     }
 
-    internal async Task Disconnect()
+    public async ValueTask DisposeAsync()
     {
         await _client.StopAsync();
         await _client.LogoutAsync();
+        await _client.DisposeAsync();
+        GC.SuppressFinalize(this);
     }
 
-    private static Log.LogLevel ToLogLevel(LogSeverity discordSeverity) => discordSeverity switch
+    public void Dispose()
     {
-        LogSeverity.Verbose => Log.LogLevel.VRB,
-        LogSeverity.Debug => Log.LogLevel.DBG,
-        LogSeverity.Info => Log.LogLevel.INF,
-        LogSeverity.Warning => Log.LogLevel.WRN,
-        LogSeverity.Error => Log.LogLevel.ERR,
-        LogSeverity.Critical => Log.LogLevel.FTL,
+        _client.Dispose();
+        GC.SuppressFinalize(this);
+    }
+
+    private static Log.Level ToLogLevel(LogSeverity discordSeverity) => discordSeverity switch
+    {
+        LogSeverity.Verbose => Log.Level.VRB,
+        LogSeverity.Debug => Log.Level.DBG,
+        LogSeverity.Info => Log.Level.INF,
+        LogSeverity.Warning => Log.Level.WRN,
+        LogSeverity.Error => Log.Level.ERR,
+        LogSeverity.Critical => Log.Level.FTL,
         _ => throw new NotImplementedException(discordSeverity.ToString())
     };
 }

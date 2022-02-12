@@ -6,6 +6,7 @@ using twitterXcrypto.twitter;
 using twitterXcrypto.util;
 using twitterXcrypto.crypto;
 using static twitterXcrypto.util.EnvironmentVariables;
+using twitterXcrypto.data;
 
 try
 {
@@ -37,12 +38,16 @@ try
                                    Tokens[TWITTER_ACCESSTOKEN],
                                    Tokens[TWITTER_ACCESSSECRET]);
     IFilteredStream stream = userClient.Streams.CreateFilteredStream();
-    DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 11ff
-
+    await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 11ff
+    await using MySqlClient dbClient = new(Tokens[DATABASE_IP],
+                                             int.Parse(Tokens[DATABASE_PORT]),
+                                             Tokens[DATABASE_NAME],
+                                             Tokens[DATABASE_USER],
+                                             Tokens[DATABASE_PWD]);
     UserWatcher watcher = new(userClient, stream);
     watcher.TweetReceived += async (tweet) =>
     {
-        Log.Write(tweet);
+        await dbClient.WriteTweet(tweet);
 
         string[]? matches = keywordFinder?.Match(tweet.Text);
         bool writeTweet = matches is null || matches.Any();
@@ -81,19 +86,19 @@ try
             }
         }
     };
-    bool success = await watcher.AddUser(UsersToFollow.ToArray());
-
+    await dbClient.Open();
+    await watcher.AddUser(UsersToFollow.ToArray());
     await discordClient.Connect(Tokens[DISCORD_TOKEN]);
+    
     watcher.StartWatching();
 
     while (Console.ReadKey().KeyChar != 'q') ;
 
     watcher.StopWatching();
-    await discordClient.Disconnect();
 }
 catch (Exception e)
 {
-    Log.Write("Unhandled Exception", e, Log.LogLevel.FTL);
+    Log.Write("Unhandled Exception", e, Log.Level.FTL);
     Environment.Exit(1);
 }
 

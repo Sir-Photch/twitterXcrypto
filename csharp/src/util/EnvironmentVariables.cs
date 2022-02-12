@@ -3,15 +3,20 @@
 internal static class EnvironmentVariables
 {
     internal const string
-        TWITTER_CONSUMERKEY = nameof(TWITTER_CONSUMERKEY),
-        TWITTER_CONSUMERSECRET = nameof(TWITTER_CONSUMERSECRET),
-        TWITTER_ACCESSTOKEN = nameof(TWITTER_ACCESSTOKEN),
-        TWITTER_ACCESSSECRET = nameof(TWITTER_ACCESSSECRET),
-        DISCORD_TOKEN = nameof(DISCORD_TOKEN),
-        DISCORD_CHANNELID = nameof(DISCORD_CHANNELID),
-        USERS_TO_FOLLOW = nameof(USERS_TO_FOLLOW),
-        XCMC_PRO_API_KEY = nameof(XCMC_PRO_API_KEY),
-        NUM_ASSETS_TO_WATCH = nameof(NUM_ASSETS_TO_WATCH);
+        TWITTER_CONSUMERKEY     = nameof(TWITTER_CONSUMERKEY),
+        TWITTER_CONSUMERSECRET  = nameof(TWITTER_CONSUMERSECRET),
+        TWITTER_ACCESSTOKEN     = nameof(TWITTER_ACCESSTOKEN),
+        TWITTER_ACCESSSECRET    = nameof(TWITTER_ACCESSSECRET),
+        DISCORD_TOKEN           = nameof(DISCORD_TOKEN),
+        DISCORD_CHANNELID       = nameof(DISCORD_CHANNELID),
+        USERS_TO_FOLLOW         = nameof(USERS_TO_FOLLOW),
+        XCMC_PRO_API_KEY        = nameof(XCMC_PRO_API_KEY),
+        NUM_ASSETS_TO_WATCH     = nameof(NUM_ASSETS_TO_WATCH),
+        DATABASE_IP             = nameof(DATABASE_IP),
+        DATABASE_PORT           = nameof(DATABASE_PORT),
+        DATABASE_NAME           = nameof(DATABASE_NAME),
+        DATABASE_USER           = nameof(DATABASE_USER),
+        DATABASE_PWD            = nameof(DATABASE_PWD);
 
     internal static IReadOnlyDictionary<string, string?> Tokens => _tokens;
     internal static IEnumerable<string>? UsersToFollow => _usersToFollow;
@@ -39,6 +44,11 @@ internal static class EnvironmentVariables
         _tokens[DISCORD_TOKEN] = Environment.GetEnvironmentVariable(DISCORD_TOKEN);
         _tokens[DISCORD_CHANNELID] = Environment.GetEnvironmentVariable(DISCORD_CHANNELID);
         _tokens[XCMC_PRO_API_KEY] = Environment.GetEnvironmentVariable(XCMC_PRO_API_KEY);
+        _tokens[DATABASE_IP] = Environment.GetEnvironmentVariable(DATABASE_IP);
+        _tokens[DATABASE_NAME] = Environment.GetEnvironmentVariable(DATABASE_NAME);
+        _tokens[DATABASE_PORT] = Environment.GetEnvironmentVariable(DATABASE_PORT);
+        _tokens[DATABASE_USER] = Environment.GetEnvironmentVariable(DATABASE_USER);
+        _tokens[DATABASE_PWD] = Environment.GetEnvironmentVariable(DATABASE_PWD);
 
         string? numAssetsToWatchString = Environment.GetEnvironmentVariable(NUM_ASSETS_TO_WATCH);
         try
