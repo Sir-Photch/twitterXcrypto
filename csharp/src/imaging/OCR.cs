@@ -44,7 +44,11 @@ namespace twitterXcrypto.imaging
         private readonly Tesseract _ocr;
         private static string? _tesseractDir;
 
-        private OCR() => _ocr = new Tesseract(_tesseractDir, Locale, OcrEngineMode.TesseractLstmCombined, Whitelist);
+        private OCR() 
+        { 
+            _ocr = new Tesseract(_tesseractDir, Locale, OcrEngineMode.TesseractLstmCombined, Whitelist);
+            Log.Write($"Initialized Tesseract OCR for locale {Locale}");
+        }
 
         private static async Task CreateWorkingDirectory()
         {
@@ -61,7 +65,7 @@ namespace twitterXcrypto.imaging
                 {
                     try
                     {
-                        Log.Write($"Downloading ocr-data for locale {locale} from {url}...\tThis may take a while :)");
+                        Log.Write($"Downloading ocr-data for locale {locale} from {url} ...");
                         using HttpClient client = new();
                         await using Stream download = await client.GetStreamAsync(url);
 
@@ -73,7 +77,7 @@ namespace twitterXcrypto.imaging
                     }
                     catch (Exception e)
                     {
-                        Log.Write($"Could not download tesseract-data for {locale} from {url}", e, Log.Level.FTL);
+                        Log.Write($"Could not download tesseract-data for locale {locale}", e, Log.Level.FTL);
                         throw;
                     }
                 }
