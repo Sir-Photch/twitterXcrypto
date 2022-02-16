@@ -30,6 +30,22 @@ CREATE TABLE `asset` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `image`
+--
+
+DROP TABLE IF EXISTS `image`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `image` (
+  `tweetid` bigint(20) NOT NULL,
+  `path` varchar(255) NOT NULL,
+  `name` varchar(64) NOT NULL,
+  PRIMARY KEY (`tweetid`,`name`),
+  CONSTRAINT `image_ibfk_1` FOREIGN KEY (`tweetid`) REFERENCES `tweet` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `mentions`
 --
 
@@ -70,7 +86,7 @@ CREATE TABLE `tweet` (
   UNIQUE KEY `time` (`time`,`userid`),
   KEY `userid` (`userid`),
   CONSTRAINT `tweet_ibfk_1` FOREIGN KEY (`userid`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=65 DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -129,4 +145,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2022-02-16 16:00:17
+-- Dump completed on 2022-02-16 20:51:32
