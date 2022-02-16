@@ -58,9 +58,11 @@ try
         Log.Write("Could not initialize OCR. It will be disabled for this session", e, Log.Level.WRN);
     }
     UserWatcher watcher = new(userClient, stream);
+    Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
     {
-        await dbClient.WriteTweet(tweet);
+        await dbWriter;
+        dbWriter = dbClient.WriteTweet(tweet);
         IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImages() : null;
 
         StringBuilder textToSearch = new(tweet.Text);
@@ -75,10 +77,10 @@ try
                                                    }));
 
         string[]? textMatches = keywordFinder?.Match(textToSearch.ToString());
-
         if (textMatches?.Any() ?? true)
         {
-            await discordClient.WriteAsync(tweet);
+            await discordWriter;
+            discordWriter = discordClient.WriteAsync(tweet);
             if (textMatches?.Any() ?? false)
             {
                 try
@@ -90,11 +92,13 @@ try
                     Log.Write("Could not read assets from coinmarketbase", e);
                 }
                 var assetsFound = coinClient.Assets.Where(asset => textMatches.Contains(asset.Name));
-                await discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound.Select(asset => asset.ToString(true, 2)))}"); // please lord forgive me for this one-liner
+                await discordWriter;
+                discordWriter = discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound.Select(asset => asset.ToString(true, 2)))}"); // please lord forgive me for this one-liner
 
+                await dbWriter;
                 await dbClient.EnrichTweet(tweet, assetsFound);
                 if (pics is not null)
-                    await dbClient.EnrichTweet(tweet, pics, imagedir);
+                    dbWriter = dbClient.EnrichTweet(tweet, pics, imagedir);
             }
         }
     };

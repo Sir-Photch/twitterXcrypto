@@ -48,7 +48,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
 
     internal async Task WriteTweet(Tweet tweet)
     {
-        await EnsureUserExists(tweet.User);
+        Task userEnsurer = EnsureUserExists(tweet.User);
 
         await using MySqlCommand cmd = _con.CreateCommand();
         cmd.CommandType = CommandType.Text;
@@ -56,6 +56,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
 
         try
         {
+            await userEnsurer;
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception e)
