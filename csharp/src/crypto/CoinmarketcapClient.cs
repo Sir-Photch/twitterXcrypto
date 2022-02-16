@@ -39,16 +39,16 @@ internal class CoinmarketcapClient
                     try { return _changes[interval]; }
                     catch (KeyNotFoundException) { return null; }
                 }
-                set
-                {
-                    if (!_changes.ContainsKey(interval))
-                        throw new KeyNotFoundException($"There is no entry for {interval}");
+                private set => _changes[interval] = value;
+            }
 
-                    if (_changes[interval] is not null)
-                        throw new InvalidOperationException($"There is already a value for {interval}");
+            internal Change(double?[] changes)
+            {
+                if (changes.Length != Intervals.Count)
+                    throw new ArgumentOutOfRangeException(nameof(changes));
 
-                    _changes[interval] = value;
-                }
+                for (int i = 0; i < changes.Length; i++)
+                    this[Intervals.ElementAt(i)] = changes[i];
             }
 
             #region ops
@@ -182,15 +182,8 @@ internal class CoinmarketcapClient
                     return ValueTask.FromException(ex);
                 }
 
-                Asset ass = new() { Name = name, Symbol = symbol, Price = price, PercentChange = new() };
-
-                for (int i = 0; i < Asset.Change.Intervals.Count; i++)
-                {
-                    ass.PercentChange[Asset.Change.Intervals.ElementAt(i)] = changes[i];
-                }
-
                 lock (_assets)
-                    _assets.AddReplace(ass);
+                    _assets.AddReplace(new Asset { Name = name, Symbol = symbol, Price = price, PercentChange = new(changes) });
             }
 
             return ValueTask.CompletedTask;
