@@ -55,7 +55,7 @@ internal class CoinmarketcapClient
 
             public override string ToString() => ToString(false, Intervals.Count);
 
-            public string ToString(bool lineBreaks, int first) => string.Join(lineBreaks ? $"{Environment.NewLine}\t" : " | ", _changes.Take(first).Where(kvp => kvp.Value is not null).Select(kvp => $"{kvp.Key}: {kvp.Value:F3}%"));
+            public string ToString(bool lineBreaks, int first) => string.Join(lineBreaks ? $"{Environment.NewLine}\t" : " | ", _changes.Take(first).Where(kvp => kvp.Value is not null).Select(kvp => $"{kvp.Key}: {kvp.Value} %"));
 
             public bool Equals(Change? other) => other is Change change && Enumerable.SequenceEqual(_changes.Values, change._changes.Values);
 
@@ -80,7 +80,7 @@ internal class CoinmarketcapClient
             sb.Append($"[ {Symbol} | {Name} ]: ");
             if (withLineBreaks)
                 sb.Append($"{Environment.NewLine}\t");
-            sb.Append($"Price: {Price}USD, ");
+            sb.Append($"Price: {Price} USD, ");
             if (withLineBreaks)
                 sb.Append($"{Environment.NewLine}\t");
             sb.Append(PercentChange.ToString(withLineBreaks, changes));
