@@ -81,8 +81,9 @@ try
                 {
                     Log.Write("Could not read assets from coinmarketbase", e);
                 }
-                var assetsFound = coinClient.Assets.Where(asset => matches.Contains(asset.Name)).Select(asset => asset.ToString(true));
-                await discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound)}");
+                var assetsFound = coinClient.Assets.Where(asset => matches.Contains(asset.Name));
+                await discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound.Select(asset => asset.ToString(true, 2)))}"); // please lord forgive me for this one-liner
+                await dbClient.EnrichTweet(tweet, assetsFound);
             }
         }
     };

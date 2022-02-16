@@ -3,6 +3,7 @@ using System.Data;
 using MySql.Data.MySqlClient;
 using twitterXcrypto.twitter;
 using twitterXcrypto.util;
+using twitterXcrypto.crypto;
 
 namespace twitterXcrypto.data
 {
@@ -18,8 +19,8 @@ namespace twitterXcrypto.data
             StringBuilder sb = new();
             sb.Append($"server={serverIp};database={dbName};userid={username};");
 
-            if (!string.IsNullOrEmpty(password))    sb.Append($"password={password};");
-            if (port.HasValue)                      sb.Append($"port={port.Value};");
+            if (!string.IsNullOrEmpty(password)) sb.Append($"password={password};");
+            if (port.HasValue) sb.Append($"port={port.Value};");
 
             _con = new(sb.ToString());
         }
@@ -29,6 +30,8 @@ namespace twitterXcrypto.data
             await _con.OpenAsync();
             Log.Write($"Opened Database with {_con.ConnectionString}");
         }
+
+        #region tweet-related
 
         /* describe tweet;
          * +----------------+------------+------+-----+---------------------+-------------------------------+
@@ -41,14 +44,14 @@ namespace twitterXcrypto.data
          * | id             | bigint(20) | NO   | PRI | NULL                | auto_increment                |
          * +----------------+------------+------+-----+---------------------+-------------------------------+
          */
+
         internal async Task WriteTweet(Tweet tweet)
         {
             await EnsureUserExists(tweet.User);
 
-            using MySqlCommand cmd = _con.CreateCommand();
+            await using MySqlCommand cmd = _con.CreateCommand();
             cmd.CommandType = CommandType.Text;
-            cmd.CommandText = $"insert into tweet(time, text, userid, containsImages) " +
-                              $"values ('{tweet.Timestamp.UtcDateTime:yyyy'-'MM'-'dd' 'HH':'mm':'ss}', '{Sanitize(tweet.Text)}', {tweet.User.Id}, {tweet.ContainsImages});";
+            cmd.CommandText = $"insert into tweet(time, text, userid, containsImages) values {tweet.ToSql()};";
 
             try
             {
@@ -60,6 +63,109 @@ namespace twitterXcrypto.data
             }
         }
 
+        /* describe mentions;
+         * +-----------+-------------+------+-----+---------+-------+
+         * | Field     | Type        | Null | Key | Default | Extra |
+         * +-----------+-------------+------+-----+---------+-------+
+         * | tweetid   | bigint(20)  | NO   | PRI | NULL    |       |
+         * | crypto    | varchar(32) | NO   | PRI | NULL    |       |
+         * | price     | double      | YES  |     | NULL    |       |
+         * | change1h  | double      | YES  |     | NULL    |       |
+         * | change24h | double      | YES  |     | NULL    |       |
+         * | change7d  | double      | YES  |     | NULL    |       |
+         * | change30d | double      | YES  |     | NULL    |       |
+         * | change60d | double      | YES  |     | NULL    |       |
+         * | change90d | double      | YES  |     | NULL    |       |
+         * +-----------+-------------+------+-----+---------+-------+
+         */
+        internal async Task EnrichTweet(Tweet tweet, IEnumerable<CoinmarketcapClient.Asset> assets)
+        {
+            if (assets.Empty())
+                return;
+
+            long? tweetId = await GetTweetId(tweet);
+
+            if (tweetId is null)
+                return;
+
+            var tasks = assets.Select(ass => EnsureAssetExists(ass));
+            await Task.WhenAll(tasks);
+
+            StringBuilder sb = new("insert into mentions values ");
+            foreach (var ass in assets)
+            {
+                sb.Append($"({tweetId},'{ass.Symbol.Sanitize()}',{ass.Price}");
+                CoinmarketcapClient.Asset.Change.Intervals.ForEach(interval => sb.Append($",{ass.PercentChange[interval]}"));
+                sb.Append("),");
+            }
+            sb.Remove(sb.Length - 1, 1); // remove last ','
+            sb.Append(';');
+
+            await using MySqlCommand insertMentions = _con.CreateCommand();
+            insertMentions.CommandType = CommandType.Text;
+            insertMentions.CommandText = sb.ToString();
+
+            try
+            {
+                await insertMentions.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                Log.Write($"Could not insert into mentions:\nQuery:\t\t{sb}", ex);
+            }
+        }
+
+        /* describe asset;
+         * +--------+-------------+------+-----+---------+-------+
+         * | Field  | Type        | Null | Key | Default | Extra |
+         * +--------+-------------+------+-----+---------+-------+
+         * | symbol | varchar(32) | NO   | PRI | NULL    |       |
+         * | name   | text        | NO   |     | NULL    |       |
+         * +--------+-------------+------+-----+---------+-------+
+         */
+        internal async Task EnsureAssetExists(CoinmarketcapClient.Asset asset)
+        {
+            await using MySqlCommand cmd = _con.CreateCommand();
+            cmd.CommandType = CommandType.Text;
+            cmd.CommandText = $"insert into asset values ('{asset.Symbol.Sanitize()}','{asset.Name.Sanitize()}')";
+
+            try
+            {
+                await cmd.ExecuteNonQueryAsync();
+            }
+            catch { }
+        }
+
+        private async Task<long?> GetTweetId(Tweet tweet)
+        {
+            await using MySqlCommand idQuery = _con.CreateCommand();
+            idQuery.CommandType = CommandType.Text;
+            idQuery.CommandText = $"select id from tweet where time = '{tweet.Timestamp.ToSql()}' and userid = {tweet.User.Id}";
+
+            object? data;
+            try
+            {
+                data = await idQuery.ExecuteScalarAsync();
+            }
+            catch (Exception e)
+            {
+                Log.Write($"Could not retrieve id from tweet \"{tweet}\"", e);
+                return null;
+            }
+
+            if (data is null)
+            {
+                Log.Write($"Tweet \"{tweet}\" did not exist in database");
+                return null;
+            }
+
+            return (long)data;
+        }
+
+        #endregion
+
+        #region user-related
+
         /* describe user;
          * +-------+--------------+------+-----+---------+-------+
          * | Field | Type         | Null | Key | Default | Extra |
@@ -70,33 +176,18 @@ namespace twitterXcrypto.data
          */
         private async Task EnsureUserExists(User user)
         {
-            using MySqlCommand cmd = _con.CreateCommand();
+            await using MySqlCommand cmd = _con.CreateCommand();
             cmd.CommandType = CommandType.Text;
-            cmd.CommandText = $"insert into user values ('{Sanitize(user.Name)}',{user.Id});";
+            cmd.CommandText = $"insert into user values {user.ToSql()};";
 
             try
             {
                 await cmd.ExecuteNonQueryAsync();
             }
-            catch (Exception e)
-            {
-                Log.Write($"Error inserting {user} into db", e, Log.Level.WRN);
-            }
+            catch { }
         }
 
-        private static string Sanitize(ReadOnlySpan<char> input)
-        {
-            StringBuilder sb = new();
-            for (int i = 0; i < input.Length; i++)
-            {
-                if (input[i] is '\'' or '\"')
-                    continue;
-
-                sb.Append(input[i]);
-            }
-
-            return sb.ToString();
-        }
+        #endregion
 
         #region interfaces
 
@@ -111,7 +202,7 @@ namespace twitterXcrypto.data
         {
             await _con.CloseAsync();
             await _con.DisposeAsync();
-            GC.SuppressFinalize(this);            
+            GC.SuppressFinalize(this);
         }
 
         #endregion
