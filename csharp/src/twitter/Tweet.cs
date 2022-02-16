@@ -1,11 +1,13 @@
 ﻿using System.Text;
 using Tweetinvi.Models;
+using twitterXcrypto.data;
+using twitterXcrypto.data.interfaces;
 using twitterXcrypto.imaging;
 using twitterXcrypto.util;
 
 namespace twitterXcrypto.twitter;
 
-internal struct Tweet
+internal struct Tweet : ISqlSerializable
 {
     internal DateTimeOffset Timestamp { get; init; }
     internal string Text { get; init; }
@@ -75,4 +77,9 @@ internal struct Tweet
 #pragma warning restore CS8604
         };
     }
+
+    /*
+     * insert into tweet (time, text, userid, containsImages)
+     */
+    public string ToSqlTuple() => $"('{Timestamp.ToSql()}', '{Text.Sanitize()}', {User.Id}, {ContainsImages})";
 }

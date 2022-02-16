@@ -1,9 +1,17 @@
-﻿namespace twitterXcrypto.twitter;
+﻿using twitterXcrypto.data;
+using twitterXcrypto.data.interfaces;
 
-internal struct User : IEquatable<User>
+namespace twitterXcrypto.twitter;
+
+internal struct User : IEquatable<User>, ISqlSerializable
 {
     internal string Name { get; init; }
     internal long Id { get; init; }
+
+    /*
+     * insert into user values (name, id)
+     */
+    public string ToSqlTuple() => $"('{Name.Sanitize()}', {Id})";
 
     #region overrides
     public override string ToString() => Name;
