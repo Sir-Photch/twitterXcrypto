@@ -1,12 +1,12 @@
 ﻿using Tweetinvi;
 using Tweetinvi.Streaming;
 using twitterXcrypto.text;
+using twitterXcrypto.util;
+using twitterXcrypto.data;
+using twitterXcrypto.crypto;
 using twitterXcrypto.discord;
 using twitterXcrypto.twitter;
-using twitterXcrypto.util;
-using twitterXcrypto.crypto;
 using static twitterXcrypto.util.EnvironmentVariables;
-using twitterXcrypto.data;
 
 try
 {
@@ -38,7 +38,7 @@ try
                                    Tokens[TWITTER_ACCESSTOKEN],
                                    Tokens[TWITTER_ACCESSSECRET]);
     IFilteredStream stream = userClient.Streams.CreateFilteredStream();
-    await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 11ff
+    await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 13ff
     await using MySqlClient dbClient = new(Tokens[DATABASE_IP],
                                              int.Parse(Tokens[DATABASE_PORT]),
                                              Tokens[DATABASE_NAME],
