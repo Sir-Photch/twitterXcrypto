@@ -4,6 +4,7 @@ using MySql.Data.MySqlClient;
 using twitterXcrypto.twitter;
 using twitterXcrypto.util;
 using twitterXcrypto.crypto;
+using twitterXcrypto.imaging;
 
 namespace twitterXcrypto.data;
 
@@ -112,6 +113,51 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         catch (Exception ex)
         {
             Log.Write($"Could not insert into mentions:\nQuery:\t\t{sb}", ex);
+        }
+    }
+
+    /* describe image;
+     * +---------+--------------+------+-----+---------+-------+
+     * | Field   | Type         | Null | Key | Default | Extra |
+     * +---------+--------------+------+-----+---------+-------+
+     * | tweetid | bigint(20)   | NO   | PRI | NULL    |       |
+     * | path    | varchar(255) | NO   |     | NULL    |       |
+     * | name    | varchar(64)  | NO   | PRI | NULL    |       |
+     * +---------+--------------+------+-----+---------+-------+
+     */
+    internal async Task EnrichTweet(Tweet tweet, IAsyncEnumerable<Image> images, DirectoryInfo imageDir)
+    {
+        if (!await images.AnyAsync())
+            return;
+
+        long? tweetId = await GetTweetId(tweet);
+
+        if (tweetId is null)
+            return;
+
+        if (!imageDir.Exists)
+            throw new DirectoryNotFoundException($"{imageDir.FullName} does not exist");
+
+        StringBuilder insertImageQuery = new("insert into image values");
+        await foreach (var image in images)
+        {
+            string path = image.Save(imageDir);
+            insertImageQuery.AppendFormat("({0},'{1}','{2}'),", tweetId, path, image.Name);
+        }
+        insertImageQuery.Remove(insertImageQuery.Length - 1, 1); // remove last ','
+        insertImageQuery.Append(';');
+
+        await using MySqlCommand insertImage = _con.CreateCommand();
+        insertImage.CommandType = CommandType.Text;
+        insertImage.CommandText = insertImageQuery.ToString();
+
+        try
+        {
+            await insertImage.ExecuteNonQueryAsync();
+        }
+        catch (Exception e)
+        {
+            Log.Write($"Could not insert into images with query {insertImageQuery}", e);
         }
     }
 
