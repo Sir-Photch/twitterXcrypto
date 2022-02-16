@@ -61,6 +61,7 @@ namespace twitterXcrypto.imaging
                 {
                     try
                     {
+                        Log.Write($"Downloading ocr-data for locale {locale} from {url}...\tThis may take a while :)");
                         using HttpClient client = new();
                         await using Stream download = await client.GetStreamAsync(url);
 
@@ -68,7 +69,7 @@ namespace twitterXcrypto.imaging
 
                         await download.CopyToAsync(fs);
 
-                        Log.Write($"Downloaded tesseract-data for {locale} from {url}");
+                        Log.Write($"Download of locale {locale} finished");
                     }
                     catch (Exception e)
                     {
