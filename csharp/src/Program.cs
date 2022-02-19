@@ -25,7 +25,7 @@ try
     KeywordFinder? keywordFinder = null;
     try
     {
-        await coinClient.RefreshAssets();
+        await coinClient.RefreshAssetsAsync();
         keywordFinder = new();
         keywordFinder.ReadKeywords(coinClient.Assets.Select(asset => (asset.Symbol, asset.Name)));
     }
@@ -57,26 +57,28 @@ try
     {
         Log.Write("Could not initialize OCR. It will be disabled for this session", e, Log.Level.WRN);
     }
-    UserWatcher watcher = new(userClient, stream);
+    using UserWatcher watcher = new(userClient, stream);
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
     {
+#pragma warning disable VSTHRD003 // thread is not started outside of lambda context
         await dbWriter;
-        dbWriter = dbClient.WriteTweet(tweet);
+#pragma warning restore VSTHRD003
+        dbWriter = dbClient.WriteTweetAsync(tweet);
         IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImages() : null;
 
         StringBuilder textToSearch = new(tweet.Text);
 
         if (pics is not null && ocr is not null && keywordFinder is not null)
-            await pics.ForEachAwaitAsync(pic => ocr.GetText(pic)
+            await pics.ForEachAwaitAsync(pic => ocr.GetTextAsync(pic)
                                                    .ContinueWith(textGetter =>
                                                    {
                                                        if (textGetter.IsCompletedSuccessfully && !string.IsNullOrWhiteSpace(textGetter.Result))
                                                            lock (textToSearch)
                                                                textToSearch.AppendFormat(" {0} ", textGetter.Result);
-                                                   }));
+                                                   }, TaskScheduler.Default));
 
-        string[]? textMatches = keywordFinder?.Match(textToSearch.ToString());
+        var textMatches = keywordFinder is not null ? await keywordFinder.MatchAsync(textToSearch.ToString()) : null;
         if (textMatches?.Any() ?? true)
         {
             await discordWriter;
@@ -85,7 +87,7 @@ try
             {
                 try
                 {
-                    await coinClient.RefreshAssets();
+                    await coinClient.RefreshAssetsAsync();
                 }
                 catch (Exception e)
                 {
@@ -96,15 +98,15 @@ try
                 discordWriter = discordClient.WriteAsync($"ALERT!{Environment.NewLine}There are cryptos mentioned in this Tweet:{Environment.NewLine}{string.Join(Environment.NewLine, assetsFound.Select(asset => asset.ToString(true, 2)))}"); // please lord forgive me for this one-liner
 
                 await dbWriter;
-                await dbClient.EnrichTweet(tweet, assetsFound);
+                await dbClient.EnrichTweetAsync(tweet, assetsFound);
                 if (pics is not null)
-                    dbWriter = dbClient.EnrichTweet(tweet, pics, imagedir);
+                    dbWriter = dbClient.EnrichTweetAsync(tweet, pics, imagedir);
             }
         }
     };
-    await dbClient.Open();
-    await watcher.AddUser(UsersToFollow.ToArray());
-    await discordClient.Connect(Tokens[DISCORD_TOKEN]);
+    await dbClient.OpenAsync();
+    await watcher.AddUserAsync(UsersToFollow.ToArray());
+    await discordClient.ConnectAsync(Tokens[DISCORD_TOKEN]);
 
     watcher.StartWatching();
 

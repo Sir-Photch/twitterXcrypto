@@ -134,10 +134,10 @@ internal class CoinmarketcapClient
         _apiKey = coinmarketcapApiKey;
     }
 
-    // may throws
-    internal async Task RefreshAssets()
+    // may throw
+    internal async Task RefreshAssetsAsync()
     {
-        XDocument doc = await GetCryptos();
+        XDocument doc = await GetCryptosAsync();
 
         if (doc?.Root?.Element("data") is null)
             return;
@@ -190,7 +190,7 @@ internal class CoinmarketcapClient
         });
     }
 
-    private async Task<XDocument> GetCryptos()
+    private async Task<XDocument> GetCryptosAsync()
     {
         UriBuilder uriBuilder = new(URL);
         uriBuilder.Query = $"start=1&limit={NumAssetsToGet}&convert=USD";

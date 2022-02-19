@@ -1,4 +1,5 @@
-﻿using Tweetinvi;
+﻿using Microsoft.VisualStudio.Threading;
+using Tweetinvi;
 using Tweetinvi.Models;
 using Tweetinvi.Streaming;
 using twitterXcrypto.util;
@@ -6,15 +7,16 @@ using static twitterXcrypto.util.Log.Level;
 
 namespace twitterXcrypto.twitter;
 
-internal class UserWatcher
+internal class UserWatcher : IDisposable
 {
     #region private fields
     private readonly IFilteredStream _stream;
     private readonly TwitterClient _client;
     private readonly Dictionary<long, User> _users = new();
-    private bool _isWatching = false;
-    private readonly AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
+    private readonly util.AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
     private CancellationTokenSource? _tokenSource;
+    private readonly SemaphoreSlim _streamSemaphore = new(1);
+    private bool _isWatching = false;
     #endregion
 
     #region ctor
@@ -45,6 +47,7 @@ internal class UserWatcher
 
         _users.Keys.ForEach(uid => _stream.AddFollow(uid));
 
+        _stream.DisconnectMessageReceived += OnStreamDisconnectMessageReceived;
         _stream.StreamStopped += OnStreamStopped;
         _stream.MatchingTweetReceived += OnMatchingTweetReceived;
 
@@ -63,11 +66,11 @@ internal class UserWatcher
                 }
                 catch { }
             }
-        });
+        }).Forget();
         // task streaming twitter
-        Task.Run(_stream.StartMatchingAnyConditionAsync);
+        _streamSemaphore.Wait();
+        Task.Run(_stream.StartMatchingAnyConditionAsync).Forget();
 
-        _isWatching = true;
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
     }
 
@@ -77,13 +80,16 @@ internal class UserWatcher
 
         _stream.Stop();
         _tokenSource?.Cancel();
+        
         _stream.StreamStopped -= OnStreamStopped;
         _stream.MatchingTweetReceived -= OnMatchingTweetReceived;
-        _isWatching = false;
+        _stream.DisconnectMessageReceived -= OnStreamDisconnectMessageReceived;
         Log.Write("Stopped watching");
+
+        _isWatching = false;
     }
 
-    internal async Task<bool> AddUser(string username)
+    internal async Task<bool> AddUserAsync(string username)
     {
         IUser iUser;
         try
@@ -92,7 +98,7 @@ internal class UserWatcher
         }
         catch (Exception e)
         {
-            Log.Write($"Could not find user {username}", e);
+            await Log.WriteAsync($"Could not find user {username}", e);
             return false;
         }
 
@@ -107,7 +113,7 @@ internal class UserWatcher
         return true;
     }
 
-    internal async Task<bool> AddUser(string[] usernames)
+    internal async Task<bool> AddUserAsync(string[] usernames)
     {
         IUser[] iUsers;
         try
@@ -116,7 +122,7 @@ internal class UserWatcher
         }
         catch (Exception e)
         {
-            Log.Write("Could not find users", e);
+            await Log.WriteAsync("Could not find users", e);
             return false;
         }
 
@@ -134,7 +140,7 @@ internal class UserWatcher
         return true;
     }
 
-    internal async Task<bool> RemoveUser(string username)
+    internal async Task<bool> RemoveUserAsync(string username)
     {
         IUser iUser;
         try
@@ -143,7 +149,7 @@ internal class UserWatcher
         }
         catch (Exception e)
         {
-            Log.Write("Could not find user", e);
+            await Log.WriteAsync("Could not find user", e);
             return false;
         }
 
@@ -151,7 +157,7 @@ internal class UserWatcher
             return _users.Remove(iUser.Id);
     }
 
-    internal async Task<bool> RemoveUser(string[] usernames)
+    internal async Task<bool> RemoveUserAsync(string[] usernames)
     {
         IUser[] iUsers;
         try
@@ -160,7 +166,7 @@ internal class UserWatcher
         }
         catch (Exception e)
         {
-            Log.Write("Could not find users", e);
+            await Log.WriteAsync("Could not find users", e);
             return false;
         }
 
@@ -172,20 +178,24 @@ internal class UserWatcher
         return true;
     }
 
+    public void Dispose()
+    {
+        StopWatching();
+        _tokenSource?.Dispose();
+        _streamSemaphore?.Dispose();
+    }
+
     #endregion
 
     #region private methods
 
     private void OnStreamStopped(object? sender, Tweetinvi.Events.StreamStoppedEventArgs e)
     {
-        if (e.Exception is not null)
+        if (e.Exception is not null) // only null when disconnected by user
         {
+            _streamSemaphore.Release();
             Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, WRN);
-            Task.Run(_stream.StartMatchingAnyConditionAsync);
-        }
-        else
-        {
-            _isWatching = false;
+            WaitRestartAsync().Forget();
         }
     }
 
@@ -194,6 +204,21 @@ internal class UserWatcher
         bool success = _tweetQueue.Enqueue(e.Tweet);
         if (!success)
             Log.Write("Could not post tweet to queue");
+    }
+
+    private void OnStreamDisconnectMessageReceived(object? sender, Tweetinvi.Events.DisconnectedEventArgs e)
+    {
+        _streamSemaphore.Release();
+        Log.Write($"Twitter aborted connection, Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", FTL);
+        WaitRestartAsync().Forget();
+    }
+
+    private async Task WaitRestartAsync()
+    {
+        var enterSemaphore = _streamSemaphore.WaitAsync();
+        await Task.Delay(500);
+        await enterSemaphore;
+        await Task.Run(_stream.StartMatchingAnyConditionAsync);
     }
 
     #endregion

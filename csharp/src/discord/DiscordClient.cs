@@ -20,7 +20,7 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
         _client.Ready += () => Log.WriteAsync("Discord-Bot ready!");
     }
 
-    internal async Task Connect(string token)
+    internal async Task ConnectAsync(string token)
     {
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
@@ -35,11 +35,9 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
     internal async Task WriteAsync(Tweet tweet)
     {
         ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
-        var channelSender =  channel.SendMessageAsync(
-                                tweet.ToString(
-                                    prependUser: true, 
-                                    replaceLineEndings: true, 
-                                    lineEndingReplacement: Environment.NewLine));
+        await channel.SendMessageAsync(tweet.ToString(prependUser: true,
+                                                      replaceLineEndings: true,
+                                                      lineEndingReplacement: Environment.NewLine));
 
         if (tweet.ContainsImages)
         {
@@ -48,7 +46,6 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
                 using MemoryStream ms = new();
                 img.Save(ms);
                 ms.Position = 0L;
-                await channelSender;
                 await channel.SendFileAsync(ms, img.Name);
             });
         }
