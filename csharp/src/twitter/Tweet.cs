@@ -15,7 +15,7 @@ internal struct Tweet : ISqlSerializable
     internal bool ContainsImages { get; init; }
     internal Uri[]? PictureUris { get; init; }
 
-    internal async IAsyncEnumerable<Image> GetImages()
+    internal async IAsyncEnumerable<Image> GetImagesAsync()
     {
         if (PictureUris is null || PictureUris.Empty())
             throw new InvalidOperationException("Tweet contains no pictures");

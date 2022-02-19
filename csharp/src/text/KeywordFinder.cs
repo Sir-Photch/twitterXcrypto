@@ -14,7 +14,7 @@ internal class KeywordFinder
         }
     }
 
-    internal string[] Match(string text)
+    internal IReadOnlySet<string> Match(string text)
     {
         HashSet<string> matches = new();
 
@@ -33,6 +33,33 @@ internal class KeywordFinder
             }
         });
 
-        return matches.ToArray();
+        return matches;
+    }
+
+    internal async Task<IReadOnlySet<string>> MatchAsync(string text)
+    {
+        HashSet<string> matches = new();
+
+        await Parallel.ForEachAsync(_keywordMap.Chunk(Environment.ProcessorCount), 
+        (chunk, token) =>
+        {
+            if (token.IsCancellationRequested)
+                return ValueTask.FromCanceled(token);
+
+            foreach (var kvp in chunk)
+            {
+                string lower = text.ToLowerInvariant();
+                if (lower.Contains(kvp.Key.ToLowerInvariant())
+                 || lower.Contains(kvp.Value.ToLowerInvariant()))
+                {
+                    lock (matches)
+                        matches.Add(kvp.Value);
+                }
+            }
+
+            return ValueTask.CompletedTask;
+        });
+
+        return matches;
     }
 }

@@ -9,46 +9,58 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ulong _channelId;
+    private IMessageChannel? _channel;
 
     internal DiscordClient(ulong channelId)
     {
         _channelId = channelId;
-        _client = new DiscordSocketClient();
+
+        //DiscordSocketConfig cfg = new() 
+        //{ 
+        //    GatewayIntents = GatewayIntents.AllUnprivileged | ~GatewayIntents.GuildScheduledEvents | ~GatewayIntents.GuildInvites
+        //};
+
+        _client = new DiscordSocketClient(/*cfg*/);
         _client.Log += msg => Log.WriteAsync(msg.Message, msg.Exception, ToLogLevel(msg.Severity));
         _client.Connected += () => Log.WriteAsync("Connected to Discord!");
-        _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null ? Log.Level.INF : Log.Level.ERR);
+        _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null or TaskCanceledException ? Log.Level.INF : Log.Level.ERR);
         _client.Ready += () => Log.WriteAsync("Discord-Bot ready!");
     }
 
-    internal async Task Connect(string token)
+    internal async Task SetBotStatusAsync(IBotStatus botStatus)
+    {
+        await _client.SetStatusAsync(botStatus.UserStatus);
+        await _client.SetActivityAsync(botStatus);
+    }
+
+    internal async Task ConnectAsync(string token)
     {
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
+        _channel = (IMessageChannel)await _client.GetChannelAsync(_channelId);
     }
 
-    internal async Task WriteAsync(string message)
-    {
-        ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
-        await channel.SendMessageAsync(message);
-    }
+    internal IDisposable EnterTypingState() => _channel?.EnterTypingState() ?? throw new InvalidOperationException("Not connected");
+
+    internal Task WriteAsync(string message) => _channel?.SendMessageAsync(message) ?? throw new InvalidOperationException("Not connected");
 
     internal async Task WriteAsync(Tweet tweet)
     {
-        ISocketMessageChannel channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
-        await channel.SendMessageAsync(
-            tweet.ToString(
-                prependUser: true, 
-                replaceLineEndings: true, 
-                lineEndingReplacement: Environment.NewLine));
+        if (_channel is null)
+            throw new InvalidOperationException("Not connected");
+
+        await _channel.SendMessageAsync(tweet.ToString(prependUser: true,
+                                                      replaceLineEndings: true,
+                                                      lineEndingReplacement: Environment.NewLine));
 
         if (tweet.ContainsImages)
         {
-            await tweet.GetImages().ForEachAsync(async img =>
+            await tweet.GetImagesAsync().ForEachAsync(async img =>
             {
                 using MemoryStream ms = new();
-                img.Save(ms);
+                await img.SaveAsync(ms);
                 ms.Position = 0L;
-                await channel.SendFileAsync(ms, img.Name);
+                await _channel.SendFileAsync(ms, img.Name);
             });
         }
     }

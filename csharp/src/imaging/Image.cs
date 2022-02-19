@@ -1,5 +1,6 @@
 ﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
+using System;
 
 namespace twitterXcrypto.imaging;
 
@@ -29,15 +30,29 @@ internal class Image
         return path;
     }
 
+    internal Task<string> SaveAsync(DirectoryInfo directory, CancellationToken token = default)
+        => Task.Run(() => Save(directory), token);
+
     internal void Save(Stream stream)
     {
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
         stream.Position = 0L;
-        byte[] bytes = CvInvoke.Imencode(".png", Mat);
+        ReadOnlySpan<byte> bytes = CvInvoke.Imencode(".png", Mat);
 
-        stream.Write(bytes, 0, bytes.Length);
+        stream.Write(bytes);
+    }
+
+    internal async Task SaveAsync(Stream stream, CancellationToken token = default)
+    {
+        if (stream is null)
+            throw new ArgumentNullException(nameof(stream));
+
+        stream.Position = 0L;
+        ReadOnlyMemory<byte> bytes = CvInvoke.Imencode(".png", Mat);
+
+        await stream.WriteAsync(bytes, token);
     }
 }
 

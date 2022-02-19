@@ -16,7 +16,7 @@ namespace twitterXcrypto.imaging
             if (string.IsNullOrWhiteSpace(Locale))
                 throw new InvalidOperationException("No locale provided");
 
-            await CreateWorkingDirectory();
+            await CreateWorkingDirectoryAsync();
 
             return _instance = new();
         }
@@ -25,7 +25,7 @@ namespace twitterXcrypto.imaging
 
         internal static string Locale { get; set; } = "eng";
 
-        internal Task<string> GetText(Image image) => Task.Run(() =>
+        internal Task<string> GetTextAsync(Image image) => Task.Run(() =>
         {
             _ocr.SetImage(image.Mat);
             return _ocr.Recognize() is 0 ? _ocr.GetUTF8Text() : string.Empty;
@@ -50,7 +50,7 @@ namespace twitterXcrypto.imaging
             Log.Write($"Initialized Tesseract OCR for locale {Locale}");
         }
 
-        private static async Task CreateWorkingDirectory()
+        private static async Task CreateWorkingDirectoryAsync()
         {
             DirectoryInfo tessdir = Directory.CreateDirectory(Tesseract.DefaultTesseractDirectory);
             _tesseractDir = tessdir.FullName;
@@ -65,7 +65,7 @@ namespace twitterXcrypto.imaging
                 {
                     try
                     {
-                        Log.Write($"Downloading ocr-data for locale {locale} from {url} ...");
+                        await Log.WriteAsync($"Downloading ocr-data for locale {locale} from {url} ...");
                         using HttpClient client = new();
                         await using Stream download = await client.GetStreamAsync(url);
 
@@ -73,11 +73,11 @@ namespace twitterXcrypto.imaging
 
                         await download.CopyToAsync(fs);
 
-                        Log.Write($"Download of locale {locale} finished");
+                        await Log.WriteAsync($"Download of locale {locale} finished");
                     }
                     catch (Exception e)
                     {
-                        Log.Write($"Could not download tesseract-data for locale {locale}", e, Log.Level.FTL);
+                        await Log.WriteAsync($"Could not download tesseract-data for locale {locale}", e, Log.Level.FTL);
                         throw;
                     }
                 }

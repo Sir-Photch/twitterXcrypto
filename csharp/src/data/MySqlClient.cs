@@ -26,10 +26,10 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         _con = new(sb.ToString());
     }
 
-    internal async Task Open()
+    internal async Task OpenAsync()
     {
         await _con.OpenAsync();
-        Log.Write($"Opened Database with {_con.ConnectionString}");
+        await Log.WriteAsync($"Opened Database with {_con.ConnectionString}");
     }
 
     #region tweet-related
@@ -46,9 +46,9 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
      * +----------------+------------+------+-----+---------------------+-------------------------------+
      */
 
-    internal async Task WriteTweet(Tweet tweet)
+    internal async Task WriteTweetAsync(Tweet tweet)
     {
-        await EnsureUserExists(tweet.User);
+        Task userEnsurer = EnsureUserExistsAsync(tweet.User);
 
         await using MySqlCommand cmd = _con.CreateCommand();
         cmd.CommandType = CommandType.Text;
@@ -56,11 +56,12 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
 
         try
         {
+            await userEnsurer;
             await cmd.ExecuteNonQueryAsync();
         }
         catch (Exception e)
         {
-            Log.Write("Could not insert tweet into db", e);
+            await Log.WriteAsync("Could not insert tweet into db", e);
         }
     }
 
@@ -79,18 +80,17 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
      * | change90d | double      | YES  |     | NULL    |       |
      * +-----------+-------------+------+-----+---------+-------+
      */
-    internal async Task EnrichTweet(Tweet tweet, IEnumerable<CoinmarketcapClient.Asset> assets)
+    internal async Task EnrichTweetAsync(Tweet tweet, IEnumerable<CoinmarketcapClient.Asset> assets)
     {
         if (assets.Empty())
             return;
 
-        long? tweetId = await GetTweetId(tweet);
+        long? tweetId = await GetTweetIdAsync(tweet);
 
         if (tweetId is null)
             return;
 
-        var tasks = assets.Select(ass => EnsureAssetExists(ass));
-        await Task.WhenAll(tasks);
+        var tasks = assets.Select(ass => EnsureAssetExistsAsync(ass));
 
         StringBuilder sb = new("insert into mentions values ");
         foreach (var ass in assets)
@@ -105,14 +105,15 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         await using MySqlCommand insertMentions = _con.CreateCommand();
         insertMentions.CommandType = CommandType.Text;
         insertMentions.CommandText = sb.ToString();
-
+        
         try
         {
+            await Task.WhenAll(tasks);
             await insertMentions.ExecuteNonQueryAsync();
         }
         catch (Exception ex)
         {
-            Log.Write($"Could not insert into mentions:\nQuery:\t\t{sb}", ex);
+            await Log.WriteAsync($"Could not insert into mentions:\nQuery:\t\t{sb}", ex);
         }
     }
 
@@ -125,12 +126,12 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
      * | name    | varchar(64)  | NO   | PRI | NULL    |       |
      * +---------+--------------+------+-----+---------+-------+
      */
-    internal async Task EnrichTweet(Tweet tweet, IAsyncEnumerable<Image> images, DirectoryInfo imageDir)
+    internal async Task EnrichTweetAsync(Tweet tweet, IAsyncEnumerable<Image> images, DirectoryInfo imageDir)
     {
         if (!await images.AnyAsync())
             return;
 
-        long? tweetId = await GetTweetId(tweet);
+        long? tweetId = await GetTweetIdAsync(tweet);
 
         if (tweetId is null)
             return;
@@ -157,7 +158,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         }
         catch (Exception e)
         {
-            Log.Write($"Could not insert into images with query {insertImageQuery}", e);
+            await Log.WriteAsync($"Could not insert into images with query {insertImageQuery}", e);
         }
     }
 
@@ -169,7 +170,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
      * | name   | text        | NO   |     | NULL    |       |
      * +--------+-------------+------+-----+---------+-------+
      */
-    internal async Task EnsureAssetExists(CoinmarketcapClient.Asset asset)
+    internal async Task EnsureAssetExistsAsync(CoinmarketcapClient.Asset asset)
     {
         await using MySqlCommand cmd = _con.CreateCommand();
         cmd.CommandType = CommandType.Text;
@@ -182,7 +183,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         catch { }
     }
 
-    private async Task<long?> GetTweetId(Tweet tweet)
+    private async Task<long?> GetTweetIdAsync(Tweet tweet)
     {
         await using MySqlCommand idQuery = _con.CreateCommand();
         idQuery.CommandType = CommandType.Text;
@@ -195,13 +196,13 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         }
         catch (Exception e)
         {
-            Log.Write($"Could not retrieve id from tweet \"{tweet}\"", e);
+            await Log.WriteAsync($"Could not retrieve id from tweet \"{tweet}\"", e);
             return null;
         }
 
         if (data is null)
         {
-            Log.Write($"Tweet \"{tweet}\" did not exist in database");
+            await Log.WriteAsync($"Tweet \"{tweet}\" did not exist in database");
             return null;
         }
 
@@ -220,7 +221,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
      * | id    | bigint(20)   | NO   | PRI | NULL    |       |
      * +-------+--------------+------+-----+---------+-------+
      */
-    private async Task EnsureUserExists(User user)
+    private async Task EnsureUserExistsAsync(User user)
     {
         await using MySqlCommand cmd = _con.CreateCommand();
         cmd.CommandType = CommandType.Text;
