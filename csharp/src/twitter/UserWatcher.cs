@@ -81,6 +81,7 @@ internal class UserWatcher : IDisposable
         // task streaming twitter
         _streamSemaphore.Wait();
         Task.Run(_stream.StartMatchingAnyConditionAsync).Forget();
+        _isWatching = true;
 
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
     }
@@ -211,11 +212,11 @@ internal class UserWatcher : IDisposable
                 _streamWatchdogTokenSource = new();
                 _streamWatchdog = WatchdogActivityAsync();
             }
-
-            _streamSemaphore.Release();
+            
             Log.Write($"Stream stopped unexpectedly. Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", e.Exception, WRN);
             WaitRestartAsync().Forget();
         }
+        _streamSemaphore.Release();
     }
 
     private void OnMatchingTweetReceived(object? sender, Tweetinvi.Events.MatchedTweetReceivedEventArgs e)

@@ -9,7 +9,6 @@ using twitterXcrypto.discord;
 using twitterXcrypto.twitter;
 using twitterXcrypto.imaging;
 using static twitterXcrypto.util.EnvironmentVariables;
-using Microsoft.VisualStudio.Threading;
 
 try
 {
@@ -24,16 +23,17 @@ try
 
     CoinmarketcapClient coinClient = new(Tokens[XCMC_PRO_API_KEY]) { NumAssetsToGet = (uint)NumAsssetsToWatch };
     KeywordFinder? keywordFinder = null;
-    try
+    var keywordInitializer = coinClient.RefreshAssetsAsync().ContinueWith(coinTask =>
     {
-        await coinClient.RefreshAssetsAsync();
+        if (coinTask.Exception is not null)
+        {
+            Log.Write("Could not read assets from coinbase!", coinTask.Exception);
+            return;
+        }
+
         keywordFinder = new();
         keywordFinder.ReadKeywords(coinClient.Assets.Select(asset => (asset.Symbol, asset.Name)));
-    }
-    catch (Exception e)
-    {
-        Log.Write("Could not read assets from coinmarketbase", e);
-    }
+    }, TaskScheduler.Default);
 
     DirectoryInfo imagedir = Directory.CreateDirectory(imageDirectory);
 
@@ -43,25 +43,25 @@ try
                                    Tokens[TWITTER_ACCESSSECRET]);
     IFilteredStream stream = userClient.Streams.CreateFilteredStream();
 
-    IBotStatus statusWatching = new TwitterStatus 
-    { 
+    IBotStatus statusWatching = new TwitterStatus
+    {
         Name = $"Stalking crypto influencers {char.ConvertFromUtf32(0x1F440)}", // eye emoji
-        Details = "Hehe what da crypto doin'",
+        Details = string.Empty,
         UserStatus = Discord.UserStatus.Online
     };
     IBotStatus statusProblem = new TwitterStatus
     {
-        Name = "@churisotophu#9172 Houston we have a problem",
-        Details = "REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+        Name = "Houston we have a problem",
+        Details = string.Empty,
         UserStatus = Discord.UserStatus.DoNotDisturb
     };
     await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID]));
-    
-    await using MySqlClient dbClient = new(Tokens[DATABASE_IP],
-                                           int.Parse(Tokens[DATABASE_PORT]),
-                                           Tokens[DATABASE_NAME],
-                                           Tokens[DATABASE_USER],
-                                           Tokens[DATABASE_PWD]);
+
+    await using MySqlClient? dbClient = new(Tokens[DATABASE_IP],
+                                            int.Parse(Tokens[DATABASE_PORT]),
+                                            Tokens[DATABASE_NAME],
+                                            Tokens[DATABASE_USER],
+                                            Tokens[DATABASE_PWD]);
 
     OCR.Whitelist = Tokens[TESSERACT_WHITELIST];
     OCR.Locale = Tokens[TESSERACT_LOCALE];
@@ -76,8 +76,8 @@ try
     }
 
     using UserWatcher watcher = new(userClient, stream);
-    watcher.Connected += discordClient.SetBotStatusAsync(statusWatching).Forget;
-    watcher.DisconnectTimeout += discordClient.SetBotStatusAsync(statusProblem).Forget;
+    watcher.Connected += async () => await discordClient.SetBotStatusAsync(statusWatching);
+    watcher.DisconnectTimeout += async () => await discordClient.SetBotStatusAsync(statusProblem);
 
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
@@ -85,7 +85,7 @@ try
 #pragma warning disable VSTHRD003 // thread is not started outside of lambda context
         await dbWriter;
 #pragma warning restore VSTHRD003
-        dbWriter = dbClient.WriteTweetAsync(tweet);
+        //dbWriter = dbClient.WriteTweetAsync(tweet);
         IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImagesAsync() : null;
 
         StringBuilder textToSearch = new(tweet.Text);
@@ -128,7 +128,8 @@ try
     };
     await dbClient.OpenAsync();
     await watcher.AddUserAsync(UsersToFollow.ToArray());
-    await discordClient.ConnectAsync(Tokens[DISCORD_TOKEN], botStatus);
+    await discordClient.ConnectAsync(Tokens[DISCORD_TOKEN]);
+    await keywordInitializer;
 
     watcher.StartWatching();
 

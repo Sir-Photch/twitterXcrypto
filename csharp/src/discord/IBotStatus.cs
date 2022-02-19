@@ -9,13 +9,13 @@ internal interface IBotStatus : IActivity
 
 internal readonly struct TwitterStatus : IBotStatus
 {
-    public string Name { get; init; }
+    public string Name { get; init; };
 
     public ActivityType Type => ActivityType.Watching;
 
     public ActivityProperties Flags => ActivityProperties.None;
 
-    public string Details { get; init; }
+    public string Details { get; init; }; // unused??
 
     public UserStatus UserStatus { get; init; }
 }

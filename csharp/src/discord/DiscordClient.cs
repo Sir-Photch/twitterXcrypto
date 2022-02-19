@@ -9,18 +9,18 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
 {
     private readonly DiscordSocketClient _client;
     private readonly ulong _channelId;
-    private ISocketMessageChannel? _channel;
+    private IMessageChannel? _channel;
 
     internal DiscordClient(ulong channelId)
     {
         _channelId = channelId;
 
-        DiscordSocketConfig cfg = new() 
-        { 
-            GatewayIntents = GatewayIntents.AllUnprivileged | ~GatewayIntents.GuildScheduledEvents | ~GatewayIntents.GuildInvites
-        };
+        //DiscordSocketConfig cfg = new() 
+        //{ 
+        //    GatewayIntents = GatewayIntents.AllUnprivileged | ~GatewayIntents.GuildScheduledEvents | ~GatewayIntents.GuildInvites
+        //};
 
-        _client = new DiscordSocketClient(cfg);
+        _client = new DiscordSocketClient(/*cfg*/);
         _client.Log += msg => Log.WriteAsync(msg.Message, msg.Exception, ToLogLevel(msg.Severity));
         _client.Connected += () => Log.WriteAsync("Connected to Discord!");
         _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null or TaskCanceledException ? Log.Level.INF : Log.Level.ERR);
@@ -37,7 +37,7 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
     {
         await _client.LoginAsync(TokenType.Bot, token);
         await _client.StartAsync();
-        _channel = (ISocketMessageChannel)await _client.GetChannelAsync(_channelId);
+        _channel = (IMessageChannel)await _client.GetChannelAsync(_channelId);
     }
 
     internal IDisposable EnterTypingState() => _channel?.EnterTypingState() ?? throw new InvalidOperationException("Not connected");
