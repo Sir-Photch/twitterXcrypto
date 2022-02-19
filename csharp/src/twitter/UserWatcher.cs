@@ -213,7 +213,7 @@ internal class UserWatcher : IDisposable
                 _streamWatchdog = WatchdogActivityAsync();
             }
             
-            Log.Write($"Stream stopped unexpectedly. Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", e.Exception, WRN);
+            Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, WRN);
             WaitRestartAsync().Forget();
         }
         _streamSemaphore.Release();

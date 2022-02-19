@@ -85,7 +85,7 @@ try
 #pragma warning disable VSTHRD003 // thread is not started outside of lambda context
         await dbWriter;
 #pragma warning restore VSTHRD003
-        //dbWriter = dbClient.WriteTweetAsync(tweet);
+        dbWriter = dbClient.WriteTweetAsync(tweet);
         IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImagesAsync() : null;
 
         StringBuilder textToSearch = new(tweet.Text);
