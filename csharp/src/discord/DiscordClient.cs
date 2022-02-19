@@ -58,7 +58,7 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
             await tweet.GetImagesAsync().ForEachAsync(async img =>
             {
                 using MemoryStream ms = new();
-                img.Save(ms);
+                await img.SaveAsync(ms);
                 ms.Position = 0L;
                 await _channel.SendFileAsync(ms, img.Name);
             });
