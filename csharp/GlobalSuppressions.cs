@@ -5,4 +5,5 @@
 
 using System.Diagnostics.CodeAnalysis;
 
-[assembly: SuppressMessage("Usage", "VSTHRD101:Avoid unsupported async delegates", Justification = "<Ausstehend>")]
+[assembly: SuppressMessage("Usage", "VSTHRD101:Avoid unsupported async delegates", Justification = "Avoid async lambdas that might throw")]
+[assembly: SuppressMessage("Usage", "VSTHRD110:Observe result of async calls", Justification = "Not necessary", Scope = "member", Target = "~M:twitterXcrypto.discord.DiscordClient.WriteAsync(System.String)~System.Threading.Tasks.Task")]

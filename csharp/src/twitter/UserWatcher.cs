@@ -9,14 +9,18 @@ namespace twitterXcrypto.twitter;
 
 internal class UserWatcher : IDisposable
 {
-    #region private fields
+    #region private fields / properties
     private readonly IFilteredStream _stream;
     private readonly TwitterClient _client;
     private readonly Dictionary<long, User> _users = new();
+
     private readonly util.AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
-    private CancellationTokenSource? _tokenSource;
+    private CancellationTokenSource? _tweetQueueTokenSource;
+
     private readonly SemaphoreSlim _streamSemaphore = new(1);
     private bool _isWatching = false;
+    private Task? _streamWatchdog;
+    private CancellationTokenSource? _streamWatchdogTokenSource;
     #endregion
 
     #region ctor
@@ -35,6 +39,12 @@ internal class UserWatcher : IDisposable
 
     internal event Action<Tweet>? TweetReceived;
 
+    internal event Action? DisconnectTimeout;
+
+    internal event Action? Connected;
+
+    internal TimeSpan DisconnectTimeoutSpan { get; set; } = TimeSpan.FromSeconds(30.0);
+
     #endregion
 
     #region methods
@@ -50,12 +60,13 @@ internal class UserWatcher : IDisposable
         _stream.DisconnectMessageReceived += OnStreamDisconnectMessageReceived;
         _stream.StreamStopped += OnStreamStopped;
         _stream.MatchingTweetReceived += OnMatchingTweetReceived;
+        _stream.StreamStarted += OnStreamStarted;
 
-        _tokenSource = new();
+        _tweetQueueTokenSource = new();
         // task getting and filtering tweets from twitter
         Task.Run(async () =>
         {
-            await foreach (ITweet tweet in _tweetQueue.WithCancellation(_tokenSource.Token))
+            await foreach (ITweet tweet in _tweetQueue.WithCancellation(_tweetQueueTokenSource.Token))
             {
                 lock (_users)
                     if (!_users.ContainsKey(tweet.CreatedBy.Id))
@@ -79,8 +90,9 @@ internal class UserWatcher : IDisposable
         if (!IsWatching) return;
 
         _stream.Stop();
-        _tokenSource?.Cancel();
+        _tweetQueueTokenSource?.Cancel();
         
+        _stream.StreamStarted -= OnStreamStarted;
         _stream.StreamStopped -= OnStreamStopped;
         _stream.MatchingTweetReceived -= OnMatchingTweetReceived;
         _stream.DisconnectMessageReceived -= OnStreamDisconnectMessageReceived;
@@ -181,7 +193,8 @@ internal class UserWatcher : IDisposable
     public void Dispose()
     {
         StopWatching();
-        _tokenSource?.Dispose();
+        _tweetQueueTokenSource?.Dispose();
+        _streamWatchdogTokenSource?.Dispose();
         _streamSemaphore?.Dispose();
     }
 
@@ -193,14 +206,22 @@ internal class UserWatcher : IDisposable
     {
         if (e.Exception is not null) // only null when disconnected by user
         {
+            if (!_streamWatchdog.IsCreatedOrRunning())
+            {
+                _streamWatchdogTokenSource = new();
+                _streamWatchdog = WatchdogActivityAsync();
+            }
+
             _streamSemaphore.Release();
-            Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, WRN);
+            Log.Write($"Stream stopped unexpectedly. Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", e.Exception, WRN);
             WaitRestartAsync().Forget();
         }
     }
 
     private void OnMatchingTweetReceived(object? sender, Tweetinvi.Events.MatchedTweetReceivedEventArgs e)
     {
+        _streamWatchdogTokenSource?.Cancel();
+
         bool success = _tweetQueue.Enqueue(e.Tweet);
         if (!success)
             Log.Write("Could not post tweet to queue");
@@ -208,8 +229,14 @@ internal class UserWatcher : IDisposable
 
     private void OnStreamDisconnectMessageReceived(object? sender, Tweetinvi.Events.DisconnectedEventArgs e)
     {
+        if (!_streamWatchdog.IsCreatedOrRunning())
+        {
+            _streamWatchdogTokenSource = new();
+            _streamWatchdog = WatchdogActivityAsync();
+        }
+
         _streamSemaphore.Release();
-        Log.Write($"Twitter aborted connection, Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", FTL);
+        Log.Write($"Twitter aborted connection. Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", FTL);
         WaitRestartAsync().Forget();
     }
 
@@ -219,6 +246,20 @@ internal class UserWatcher : IDisposable
         await Task.Delay(500);
         await enterSemaphore;
         await Task.Run(_stream.StartMatchingAnyConditionAsync);
+    }
+
+    private void OnStreamStarted(object? sender, EventArgs e)
+    {
+        _streamWatchdogTokenSource?.Cancel();
+        Connected?.Invoke();
+        Log.Write("Twitter stream started.");
+    }
+
+    private async Task WatchdogActivityAsync()
+    {
+        await Task.Delay(DisconnectTimeoutSpan);
+        if (!_streamWatchdogTokenSource?.IsCancellationRequested ?? true)
+            DisconnectTimeout?.Invoke();
     }
 
     #endregion

@@ -9,6 +9,7 @@ using twitterXcrypto.discord;
 using twitterXcrypto.twitter;
 using twitterXcrypto.imaging;
 using static twitterXcrypto.util.EnvironmentVariables;
+using Microsoft.VisualStudio.Threading;
 
 try
 {
@@ -35,17 +36,33 @@ try
     }
 
     DirectoryInfo imagedir = Directory.CreateDirectory(imageDirectory);
+
     TwitterClient userClient = new(Tokens[TWITTER_CONSUMERKEY],
                                    Tokens[TWITTER_CONSUMERSECRET],
                                    Tokens[TWITTER_ACCESSTOKEN],
                                    Tokens[TWITTER_ACCESSSECRET]);
     IFilteredStream stream = userClient.Streams.CreateFilteredStream();
-    await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID])); // wont be null since we check for missing variables, line 13ff
+
+    IBotStatus statusWatching = new TwitterStatus 
+    { 
+        Name = $"Stalking crypto influencers {char.ConvertFromUtf32(0x1F440)}", // eye emoji
+        Details = "Hehe what da crypto doin'",
+        UserStatus = Discord.UserStatus.Online
+    };
+    IBotStatus statusProblem = new TwitterStatus
+    {
+        Name = "@churisotophu#9172 Houston we have a problem",
+        Details = "REEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+        UserStatus = Discord.UserStatus.DoNotDisturb
+    };
+    await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID]));
+    
     await using MySqlClient dbClient = new(Tokens[DATABASE_IP],
-                                             int.Parse(Tokens[DATABASE_PORT]),
-                                             Tokens[DATABASE_NAME],
-                                             Tokens[DATABASE_USER],
-                                             Tokens[DATABASE_PWD]);
+                                           int.Parse(Tokens[DATABASE_PORT]),
+                                           Tokens[DATABASE_NAME],
+                                           Tokens[DATABASE_USER],
+                                           Tokens[DATABASE_PWD]);
+
     OCR.Whitelist = Tokens[TESSERACT_WHITELIST];
     OCR.Locale = Tokens[TESSERACT_LOCALE];
     OCR? ocr = null;
@@ -57,7 +74,11 @@ try
     {
         Log.Write("Could not initialize OCR. It will be disabled for this session", e, Log.Level.WRN);
     }
+
     using UserWatcher watcher = new(userClient, stream);
+    watcher.Connected += discordClient.SetBotStatusAsync(statusWatching).Forget;
+    watcher.DisconnectTimeout += discordClient.SetBotStatusAsync(statusProblem).Forget;
+
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
     {
@@ -65,7 +86,7 @@ try
         await dbWriter;
 #pragma warning restore VSTHRD003
         dbWriter = dbClient.WriteTweetAsync(tweet);
-        IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImages() : null;
+        IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImagesAsync() : null;
 
         StringBuilder textToSearch = new(tweet.Text);
 
@@ -81,6 +102,7 @@ try
         var textMatches = keywordFinder is not null ? await keywordFinder.MatchAsync(textToSearch.ToString()) : null;
         if (textMatches?.Any() ?? true)
         {
+            using var typingState = discordClient.EnterTypingState();
             await discordWriter;
             discordWriter = discordClient.WriteAsync(tweet);
             if (textMatches?.Any() ?? false)
@@ -106,7 +128,7 @@ try
     };
     await dbClient.OpenAsync();
     await watcher.AddUserAsync(UsersToFollow.ToArray());
-    await discordClient.ConnectAsync(Tokens[DISCORD_TOKEN]);
+    await discordClient.ConnectAsync(Tokens[DISCORD_TOKEN], botStatus);
 
     watcher.StartWatching();
 
