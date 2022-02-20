@@ -8,8 +8,8 @@ namespace twitterXcrypto.text;
 
 internal class KeywordFinder
 {
-    private Regex? _regex = null;
-    private Dictionary<string, string> _keywords = new();
+    private readonly Regex _regex;
+    private readonly Dictionary<string, string> _keywords;
 
     /*
      * https://stackoverflow.com/questions/71194117/c-sharp-regex-whitespace-between-capturing-groups
@@ -19,13 +19,12 @@ internal class KeywordFinder
         var concatenatedPairs = pairs.Select(p => p.Key)
                                      .Concat(pairs.Select(p => p.Val))
                                      .Distinct()
-                                     // strings should already be escaped via Regex.Escape
-                                     //.Where(s => s.All(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c)))
-                                     .OrderBy(s => s, StringComparer.OrdinalIgnoreCase);
+                                     .OrderByDescending(s => s.Length)
+                                     .Select(Regex.Escape);
 
-        pairs.ForEach(p => _keywords[p.Key] = p.Val);
+        _keywords = new(pairs.Select(p => new KeyValuePair<string, string>(p.Key, p.Val)));
 
-        _regex = new Regex($@"\b(?:{string.Join('|', concatenatedPairs.Select(Regex.Escape))})\b",
+        _regex = new Regex($@"(?!\B\w)(?:{string.Join('|', concatenatedPairs)})(?<!\w\B)",
                            RegexOptions.Compiled | RegexOptions.IgnoreCase);
     }
 
