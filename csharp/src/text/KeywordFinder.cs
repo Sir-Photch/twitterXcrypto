@@ -1,5 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
-using System.Collections.Concurrent;
+using System.Text.RegularExpressions;
+using twitterXcrypto.util;
 
 [assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 
@@ -7,62 +8,56 @@ namespace twitterXcrypto.text;
 
 internal class KeywordFinder
 {
-    private readonly ConcurrentDictionary<string, string> _keywordMap = new();
+    private Regex? _regex = null;
+    private Dictionary<string, string> _keywords = new();
 
-    internal void ReadKeywords(IEnumerable<(string Key, string Val)> pairs)
+    /*
+     * https://stackoverflow.com/questions/71194117/c-sharp-regex-whitespace-between-capturing-groups
+     */
+    internal KeywordFinder(IEnumerable<(string Key, string Val)> pairs)
     {
-        foreach (var kvPair in pairs)
-        {
-            _keywordMap.TryAdd(kvPair.Key, kvPair.Val);
-        }
+        var concatenatedPairs = pairs.Select(p => p.Key)
+                                     .Concat(pairs.Select(p => p.Val))
+                                     .Distinct()
+                                     // strings should already be escaped via Regex.Escape
+                                     //.Where(s => s.All(c => char.IsLetterOrDigit(c) || char.IsWhiteSpace(c)))
+                                     .OrderBy(s => s, StringComparer.OrdinalIgnoreCase);
+
+        pairs.ForEach(p => _keywords[p.Key] = p.Val);
+
+        _regex = new Regex($@"\b(?:{string.Join('|', concatenatedPairs.Select(Regex.Escape))})\b",
+                           RegexOptions.Compiled | RegexOptions.IgnoreCase);
     }
 
     internal IReadOnlySet<string> Match(string text)
     {
-        HashSet<string> matches = new();
+        if (_regex is null)
+            return new HashSet<string>();
 
-        Parallel.ForEach(_keywordMap.Chunk(Environment.ProcessorCount), 
-        chunk =>
+        HashSet<string> retval = new();
+
+        MatchCollection matches = _regex.Matches(text);
+
+        for (int i = 0; i < matches.Count; i++)
         {
-            foreach (var kvp in chunk)
-            {
-                string lower = text.ToLowerInvariant();
-                if (lower.Contains(kvp.Key.ToLowerInvariant()) 
-                 || lower.Contains(kvp.Value.ToLowerInvariant()))
-                {
-                    lock (matches)
-                        matches.Add(kvp.Value);
-                }
-            }
-        });
+            string trimmed = Trim(matches[i].Value);
 
-        return matches;
+            if (_keywords.ContainsKey(trimmed))
+                retval.Add(_keywords[trimmed]);
+            else
+                retval.Add(trimmed);
+        }
+
+        return retval;
     }
 
-    internal async Task<IReadOnlySet<string>> MatchAsync(string text)
+    private static string Trim(ReadOnlySpan<char> s)
     {
-        HashSet<string> matches = new();
-
-        await Parallel.ForEachAsync(_keywordMap.Chunk(Environment.ProcessorCount), 
-        (chunk, token) =>
-        {
-            if (token.IsCancellationRequested)
-                return ValueTask.FromCanceled(token);
-
-            foreach (var kvp in chunk)
-            {
-                string lower = text.ToLowerInvariant();
-                if (lower.Contains(kvp.Key.ToLowerInvariant())
-                 || lower.Contains(kvp.Value.ToLowerInvariant()))
-                {
-                    lock (matches)
-                        matches.Add(kvp.Value);
-                }
-            }
-
-            return ValueTask.CompletedTask;
-        });
-
-        return matches;
+        var noWhiteSpace = s.Trim();
+        if (!char.IsLetter(noWhiteSpace[0]))
+            noWhiteSpace = noWhiteSpace[1..];
+        if (!char.IsLetter(noWhiteSpace[^1]))
+            noWhiteSpace = noWhiteSpace[0..^1];
+        return new string(noWhiteSpace);
     }
 }
