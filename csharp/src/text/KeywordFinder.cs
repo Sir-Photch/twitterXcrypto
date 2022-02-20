@@ -16,16 +16,16 @@ internal class KeywordFinder
      */
     internal KeywordFinder(IEnumerable<(string Key, string Val)> pairs)
     {
-        var concatenatedPairs = pairs.Select(p => p.Key)
-                                     .Concat(pairs.Select(p => p.Val))
-                                     .Distinct()
-                                     .OrderByDescending(s => s.Length)
-                                     .Select(Regex.Escape);
+        var orderedEscapedConcatenated = pairs.Select(p => p.Key)
+                                              .Concat(pairs.Select(p => p.Val))
+                                              .Distinct()
+                                              .OrderByDescending(s => s.Length)
+                                              .Select(Regex.Escape);
 
         _keywords = new(pairs.Select(p => new KeyValuePair<string, string>(p.Key, p.Val)));
 
-        _regex = new Regex($@"(?!\B\w)(?:{string.Join('|', concatenatedPairs)})(?<!\w\B)",
-                           RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        _regex = new Regex($@"(?!\B\w)(?:{string.Join('|', orderedEscapedConcatenated)})(?<!\w\B)",
+                           RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.Multiline);
     }
 
     internal IReadOnlySet<string> Match(string text)
@@ -39,24 +39,30 @@ internal class KeywordFinder
 
         for (int i = 0; i < matches.Count; i++)
         {
-            string trimmed = Trim(matches[i].Value);
+            string trimmed = TrimAndLower(matches[i].Value);
 
-            if (_keywords.ContainsKey(trimmed))
-                retval.Add(_keywords[trimmed]);
-            else
-                retval.Add(trimmed);
+            var keysInDictionary = _keywords.Keys.Where(k => trimmed == k.ToLowerInvariant());
+            var valInDictionary = _keywords.Values.Where(k => trimmed == k.ToLowerInvariant());
+
+            if (keysInDictionary.Any())
+                retval.Add(_keywords[keysInDictionary.First()]);
+            else if (valInDictionary.Any())
+                retval.Add(valInDictionary.First());
         }
 
         return retval;
     }
 
-    private static string Trim(ReadOnlySpan<char> s)
+    private static string TrimAndLower(ReadOnlySpan<char> s)
     {
         var noWhiteSpace = s.Trim();
         if (!char.IsLetter(noWhiteSpace[0]))
             noWhiteSpace = noWhiteSpace[1..];
         if (!char.IsLetter(noWhiteSpace[^1]))
             noWhiteSpace = noWhiteSpace[0..^1];
-        return new string(noWhiteSpace);
+
+        Span<char> lower = stackalloc char[noWhiteSpace.Length];
+        noWhiteSpace.ToLowerInvariant(lower);
+        return new string(lower);
     }
 }
