@@ -75,6 +75,9 @@ internal class CoinmarketcapClient
 
         public string ToString(bool withLineBreaks, int changes)
         {
+            if (changes > Change.Intervals.Count)
+                changes = Change.Intervals.Count;
+
             StringBuilder sb = new();
 
             sb.Append($"[ {Symbol} | {Name} ]: ");
