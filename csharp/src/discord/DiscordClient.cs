@@ -63,21 +63,53 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
                 await _channel.SendFileAsync(ms, img.Name);
             });
         }
-    }
+    }    
+
+    #region IDisposable
+    private bool _disposed = false;
 
     public async ValueTask DisposeAsync()
     {
-        await _client.StopAsync();
-        await _client.LogoutAsync();
-        await _client.DisposeAsync();
+        await DisposeAsyncCore().ConfigureAwait(false);
+        Dispose(false);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        if (_disposed) return;
+
+        if (_client is not null)
+        {
+            await _client.StopAsync().ConfigureAwait(false);
+            await _client.LogoutAsync().ConfigureAwait(false);
+            await _client.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     public void Dispose()
     {
-        _client.Dispose();
+        Dispose(true);
         GC.SuppressFinalize(this);
     }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing)
+        {
+            _client.Dispose();
+        }
+
+        _disposed = true;
+    }
+
+    ~DiscordClient()
+    {
+        Dispose(false);
+    }
+    #endregion
 
     private static Log.Level ToLogLevel(LogSeverity discordSeverity) => discordSeverity switch
     {

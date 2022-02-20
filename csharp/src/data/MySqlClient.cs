@@ -236,21 +236,45 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
 
     #endregion
 
-    #region interfaces
+    #region IDisposable
+    private bool _disposed = false;
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing)
+        {
+            _con.Close();
+            _con.Dispose();
+        }
+
+        _disposed = true;
+    }
 
     public void Dispose()
     {
-        _con.Close();
-        _con.Dispose();
+        Dispose(true);
         GC.SuppressFinalize(this);
+    }
+
+    protected virtual async ValueTask DisposeAsyncCore()
+    {
+        if (_con is not null)
+        {
+            await _con.CloseAsync().ConfigureAwait(false);
+            await _con.DisposeAsync().ConfigureAwait(false);
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        await _con.CloseAsync();
-        await _con.DisposeAsync();
+        await DisposeAsyncCore().ConfigureAwait(false);
+        Dispose(false);
         GC.SuppressFinalize(this);
     }
+
+    ~MySqlClient() => Dispose(false);
 
     #endregion
 }

@@ -7,7 +7,7 @@ using static twitterXcrypto.util.Log.Level;
 
 namespace twitterXcrypto.twitter;
 
-internal class UserWatcher : IDisposable
+internal class UserWatcher
 {
     #region private fields / properties
     private readonly IFilteredStream _stream;
@@ -189,14 +189,6 @@ internal class UserWatcher : IDisposable
                   .ForEach(uid => _users.Remove(uid));
 
         return true;
-    }
-
-    public void Dispose()
-    {
-        StopWatching();
-        _tweetQueueTokenSource?.Dispose();
-        _streamWatchdogTokenSource?.Dispose();
-        _streamSemaphore?.Dispose();
     }
 
     #endregion

@@ -31,12 +31,33 @@ namespace twitterXcrypto.imaging
             return _ocr.Recognize() is 0 ? _ocr.GetUTF8Text() : string.Empty;
         });
 
+        #region IDisposable
+
+        private bool _disposed = false;
+
         public void Dispose()
         {
-            _ocr.Dispose();
-            _instance = null;
+            Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                _ocr.Dispose();
+                _instance = null;
+            }
+
+            _disposed = true;
+        }
+
+        ~OCR() => Dispose(false);
+
+        #endregion
 
         #region private
 

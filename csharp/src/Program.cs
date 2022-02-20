@@ -81,7 +81,7 @@ try
         Log.Write("Could not initialize OCR. It will be disabled for this session", e, Log.Level.WRN);
     }
 
-    using UserWatcher watcher = new(userClient, stream);
+    UserWatcher watcher = new(userClient, stream);
     watcher.Connected += async () => await discordClient.SetBotStatusAsync(statusWatching);
     watcher.DisconnectTimeout += async () => await discordClient.SetBotStatusAsync(statusProblem);
 
