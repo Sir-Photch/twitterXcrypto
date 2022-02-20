@@ -1,10 +1,12 @@
-﻿using Emgu.CV;
+﻿using System.Runtime.CompilerServices;
+using Emgu.CV;
 using Emgu.CV.CvEnum;
-using System;
+
+[assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 
 namespace twitterXcrypto.imaging;
 
-internal class Image
+internal class Image : IDisposable
 {
     internal Mat Mat { get; } = new();
 
@@ -22,6 +24,9 @@ internal class Image
 
     internal string Save(DirectoryInfo directory)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(Mat));
+
         if (!directory.Exists)
             throw new ArgumentException("Bad directory");
 
@@ -35,6 +40,9 @@ internal class Image
 
     internal void Save(Stream stream)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(Mat));
+
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
@@ -46,6 +54,9 @@ internal class Image
 
     internal async Task SaveAsync(Stream stream, CancellationToken token = default)
     {
+        if (_disposed)
+            throw new ObjectDisposedException(nameof(Mat));
+
         if (stream is null)
             throw new ArgumentNullException(nameof(stream));
 
@@ -54,5 +65,32 @@ internal class Image
 
         await stream.WriteAsync(bytes, token);
     }
+
+    #region IDisposable
+    private bool _disposed = false;
+
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
+        if (disposing)
+        {
+            Mat.Dispose();
+        }
+
+        _disposed = true;
+    }
+
+    ~Image()
+    {
+        Dispose(false);
+    }
+    #endregion
 }
 

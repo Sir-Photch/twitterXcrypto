@@ -1,4 +1,8 @@
-﻿namespace twitterXcrypto.util;
+﻿using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("twitterXcrypto_tests")]
+
+namespace twitterXcrypto.util;
 
 internal static class ThreadingExtensions
 {

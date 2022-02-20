@@ -1,4 +1,7 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Runtime.CompilerServices;
+using System.Collections.Concurrent;
+
+[assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 
 namespace twitterXcrypto.text;
 
