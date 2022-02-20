@@ -1,4 +1,7 @@
 ﻿using System.Text;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 
 namespace twitterXcrypto.data;
 
