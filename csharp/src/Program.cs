@@ -47,7 +47,6 @@ try
                                    Tokens[TWITTER_CONSUMERSECRET],
                                    Tokens[TWITTER_ACCESSTOKEN],
                                    Tokens[TWITTER_ACCESSSECRET]);
-    IFilteredStream stream = userClient.Streams.CreateFilteredStream();
 
     IBotStatus statusWatching = new TwitterStatus
     {
@@ -81,7 +80,7 @@ try
         Log.Write("Could not initialize OCR. It will be disabled for this session", e, Log.Level.WRN);
     }
 
-    UserWatcher watcher = new(userClient, stream);
+    UserWatcher watcher = new(userClient);
     watcher.Connected += async () => await discordClient.SetBotStatusAsync(statusWatching);
     watcher.DisconnectTimeout += async () => await discordClient.SetBotStatusAsync(statusProblem);
 

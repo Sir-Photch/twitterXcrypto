@@ -10,9 +10,10 @@ namespace twitterXcrypto.twitter;
 internal class UserWatcher
 {
     #region private fields / properties
-    private readonly IFilteredStream _stream;
+    
     private readonly TwitterClient _client;
     private readonly Dictionary<long, User> _users = new();
+    private IFilteredStream? _stream;
 
     private readonly util.AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
     private CancellationTokenSource? _tweetQueueTokenSource;
@@ -24,9 +25,8 @@ internal class UserWatcher
     #endregion
 
     #region ctor
-    internal UserWatcher(TwitterClient client, IFilteredStream stream)
+    internal UserWatcher(TwitterClient client)
     {
-        _stream = stream;
         _client = client;
     }
     #endregion
@@ -53,7 +53,7 @@ internal class UserWatcher
     {
         if (IsWatching) return;
 
-        _stream.ClearFollows();
+        _stream = _client.Streams.CreateFilteredStream();
 
         _users.Keys.ForEach(uid => _stream.AddFollow(uid));
 
@@ -89,6 +89,9 @@ internal class UserWatcher
     internal void StopWatching()
     {
         if (!IsWatching) return;
+
+        if (_stream is null)
+            return;
 
         _stream.Stop();
         _tweetQueueTokenSource?.Cancel();
@@ -238,7 +241,22 @@ internal class UserWatcher
         var enterSemaphore = _streamSemaphore.WaitAsync();
         await Task.Delay(500);
         await enterSemaphore;
-        await Task.Run(_stream.StartMatchingAnyConditionAsync);
+
+        try 
+        {
+            StopWatching();
+        }
+        catch (Exception e)
+        {
+            await Log.WriteAsync($"Stream restart cleanup failed", e);
+        }
+
+        StartWatching();
+
+        if (_stream is not null)
+            await Task.Run(_stream.StartMatchingAnyConditionAsync);
+        else
+            await Log.WriteAsync("Could not initialize stream after cleanup!", FTL);
     }
 
     private void OnStreamStarted(object? sender, EventArgs e)
