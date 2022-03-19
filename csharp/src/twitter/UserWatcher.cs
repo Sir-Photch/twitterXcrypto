@@ -239,7 +239,7 @@ internal class UserWatcher
     private async Task WaitRestartAsync()
     {
         var enterSemaphore = _streamSemaphore.WaitAsync();
-        await Task.Delay(500);
+        await Task.Delay(500); // this should be removed. not sure why I put it here
         await enterSemaphore;
 
         try 
