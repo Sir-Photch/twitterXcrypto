@@ -30,7 +30,7 @@
 
   <ItemGroup>
 	<Folder Include="src\" IsNamespaceProvider="False" />
-    <PackageReference Include="Discord.Net" Version="3.3.2" />
+    <PackageReference Include="Discord.Net" Version="3.4.1" />
     <PackageReference Include="Emgu.CV" Version="4.5.5.4823" />
     <PackageReference Include="Emgu.CV.runtime.linux-arm" Version="4.5.5.4823" />
     <PackageReference Include="Emgu.CV.runtime.windows" Version="4.5.5.4823" />
