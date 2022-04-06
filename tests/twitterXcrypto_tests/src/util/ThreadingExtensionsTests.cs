@@ -27,19 +27,4 @@ public class ThreadingExtensionsTests
         sem = new(1);
         Assert.IsTrue(await sem.IsEnterableAsync());
     }
-
-    [TestMethod]
-    public async Task IsCreatedOrRunningTestAsync()
-    {
-        Task waiter = Task.Delay(200);
-        Assert.IsTrue(waiter.IsCreatedOrRunning());
-        await waiter;
-        Assert.IsFalse(waiter.IsCreatedOrRunning());
-
-        Task exception = Task.FromException(new());
-        Assert.IsFalse(exception.IsCreatedOrRunning());
-
-        Task? @null = null;
-        Assert.IsFalse(@null.IsCreatedOrRunning());
-    }
 }
