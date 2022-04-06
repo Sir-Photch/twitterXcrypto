@@ -19,6 +19,4 @@ internal static class ThreadingExtensions
         if (isEnterable) semaphore.Release();
         return isEnterable;
     }
-
-    internal static bool IsCreatedOrRunning(this Task? nullableTask) => nullableTask is Task task && task.Status is not (TaskStatus.Faulted or TaskStatus.Canceled or TaskStatus.RanToCompletion);
 }

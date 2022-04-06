@@ -202,7 +202,7 @@ internal class UserWatcher
     {
         if (e.Exception is not null) // only null when disconnected by user
         {
-            if (!_streamWatchdog.IsCreatedOrRunning())
+            if (_streamWatchdog is null || _streamWatchdog.IsCompleted)
             {
                 _streamWatchdogTokenSource = new();
                 _streamWatchdog = WatchdogActivityAsync();
@@ -225,7 +225,7 @@ internal class UserWatcher
 
     private void OnStreamDisconnectMessageReceived(object? sender, Tweetinvi.Events.DisconnectedEventArgs e)
     {
-        if (!_streamWatchdog.IsCreatedOrRunning())
+        if (_streamWatchdog is null || _streamWatchdog.IsCompleted)
         {
             _streamWatchdogTokenSource = new();
             _streamWatchdog = WatchdogActivityAsync();
@@ -238,9 +238,7 @@ internal class UserWatcher
 
     private async Task WaitRestartAsync()
     {
-        var enterSemaphore = _streamSemaphore.WaitAsync();
-        await Task.Delay(500); // this should be removed. not sure why I put it here
-        await enterSemaphore;
+        await _streamSemaphore.WaitAsync();
 
         try 
         {
@@ -252,11 +250,6 @@ internal class UserWatcher
         }
 
         StartWatching();
-
-        if (_stream is not null)
-            await Task.Run(_stream.StartMatchingAnyConditionAsync);
-        else
-            await Log.WriteAsync("Could not initialize stream after cleanup!", FTL);
     }
 
     private void OnStreamStarted(object? sender, EventArgs e)
@@ -269,7 +262,8 @@ internal class UserWatcher
     private async Task WatchdogActivityAsync()
     {
         await Task.Delay(DisconnectTimeoutSpan);
-        if (!_streamWatchdogTokenSource?.IsCancellationRequested ?? true)
+
+        if (_streamWatchdogTokenSource is null || _streamWatchdogTokenSource.IsCancellationRequested)
             DisconnectTimeout?.Invoke();
     }
 
