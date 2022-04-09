@@ -163,7 +163,7 @@ internal class UserWatcher
 
         bool success = _tweetQueue.Enqueue(e.Tweet);
 
-        if (success)
+        if (!success)
             Log.Write("Could not post tweet to queue", VRB);
     }
 
