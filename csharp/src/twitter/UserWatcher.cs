@@ -10,18 +10,19 @@ namespace twitterXcrypto.twitter;
 internal class UserWatcher
 {
     #region private fields / properties
-    
+
     private readonly TwitterClient _client;
     private readonly Dictionary<long, User> _users = new();
     private IFilteredStream? _stream;
+
+    private readonly SemaphoreSlim _heartbeatInvokeSemaphore = new(1);
+    private Watchdog? _watchdog;
 
     private readonly util.AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
     private CancellationTokenSource? _tweetQueueTokenSource;
 
     private readonly SemaphoreSlim _streamSemaphore = new(1);
     private bool _isWatching = false;
-    private Task? _streamWatchdog;
-    private CancellationTokenSource? _streamWatchdogTokenSource;
     #endregion
 
     #region ctor
@@ -37,11 +38,13 @@ internal class UserWatcher
 
     internal bool IsWatching => _isWatching;
 
-    internal event Action<Tweet>? TweetReceived;
+    internal event Func<Tweet, Task>? TweetReceived;
 
-    internal event Action? DisconnectTimeout;
+    internal event Func<Task>? DisconnectTimeout;
 
-    internal event Action? Connected;
+    internal event Func<Task>? Connected;
+
+    internal event Func<Task>? Heartbeat;
 
     internal TimeSpan DisconnectTimeoutSpan { get; set; } = TimeSpan.FromSeconds(30.0);
 
@@ -52,40 +55,24 @@ internal class UserWatcher
     internal void StartWatching()
     {
         _StartWatching();
+        _watchdog = new(DisconnectTimeoutSpan, continueOnAlert: true);
+        _watchdog.OnTimeout += OnWatchdogTimeoutAsync;
+        _watchdog.OnPet += OnWatchdogPetAsync;
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
-    }
+    }    
 
     internal void StopWatching()
     {
+        if (_watchdog is not null)
+        {
+            _watchdog.OnPet -= OnWatchdogPetAsync;
+            _watchdog.OnTimeout -= OnWatchdogTimeoutAsync;
+        }
         _StopWatching();
-        Log.Write("Stopped watching");        
-    }    
-
-    internal async Task<bool> AddUserAsync(string username)
-    {
-        IUser iUser;
-        try
-        {
-            iUser = await _client.Users.GetUserAsync(username);
-        }
-        catch (Exception e)
-        {
-            await Log.WriteAsync($"Could not find user {username}", e);
-            return false;
-        }
-
-        lock (_users)
-        {
-            if (_users.ContainsKey(iUser.Id))
-                return true;
-
-            _users[iUser.Id] = new User { Name = iUser.Name, Id = iUser.Id };
-        }
-
-        return true;
+        Log.Write("Stopped watching");
     }
 
-    internal async Task<bool> AddUserAsync(string[] usernames)
+    internal async Task<bool> AddUserAsync(params string[] usernames)
     {
         IUser[] iUsers;
         try
@@ -112,24 +99,7 @@ internal class UserWatcher
         return true;
     }
 
-    internal async Task<bool> RemoveUserAsync(string username)
-    {
-        IUser iUser;
-        try
-        {
-            iUser = await _client.Users.GetUserAsync(username);
-        }
-        catch (Exception e)
-        {
-            await Log.WriteAsync("Could not find user", e);
-            return false;
-        }
-
-        lock (_users)
-            return _users.Remove(iUser.Id);
-    }
-
-    internal async Task<bool> RemoveUserAsync(string[] usernames)
+    internal async Task<bool> RemoveUserAsync(params string[] usernames)
     {
         IUser[] iUsers;
         try
@@ -154,16 +124,33 @@ internal class UserWatcher
 
     #region private methods
 
+    private async Task OnWatchdogTimeoutAsync(TimeSpan timeout, TimeSpan elapsed)
+    {
+        await Log.WriteAsync($"Watchdog timeout after {timeout}, lasted {elapsed}");
+        if (DisconnectTimeout is not null)
+            await DisconnectTimeout();
+    }
+
+    private async Task OnWatchdogPetAsync(TimeSpan elapsed)
+    {
+        if (!await _heartbeatInvokeSemaphore.WaitAsync(0))
+            return;
+
+        try
+        {
+            if (Heartbeat is not null)
+                await Heartbeat();
+        }
+        finally
+        {
+            _heartbeatInvokeSemaphore.Release();
+        }
+    }
+
     private void OnStreamStopped(object? sender, Tweetinvi.Events.StreamStoppedEventArgs e)
     {
         if (e.Exception is not null) // only null when disconnected by user
         {
-            if (_streamWatchdog is null || _streamWatchdog.IsCompleted)
-            {
-                _streamWatchdogTokenSource = new();
-                _streamWatchdog = WatchdogActivityAsync();
-            }
-            
             Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, VRB);
             WaitRestartAsync().Forget();
         }
@@ -172,21 +159,16 @@ internal class UserWatcher
 
     private void OnMatchingTweetReceived(object? sender, Tweetinvi.Events.MatchedTweetReceivedEventArgs e)
     {
-        _streamWatchdogTokenSource?.Cancel();
+        _watchdog?.Pet();
 
         bool success = _tweetQueue.Enqueue(e.Tweet);
+
         if (!success)
             Log.Write("Could not post tweet to queue", VRB);
     }
 
     private void OnStreamDisconnectMessageReceived(object? sender, Tweetinvi.Events.DisconnectedEventArgs e)
     {
-        if (_streamWatchdog is null || _streamWatchdog.IsCompleted)
-        {
-            _streamWatchdogTokenSource = new();
-            _streamWatchdog = WatchdogActivityAsync();
-        }
-
         _streamSemaphore.Release();
         Log.Write($"Twitter aborted connection. Code: {e.DisconnectMessage.Code}, Reason: {e.DisconnectMessage.Reason}; Restarting...", FTL);
         WaitRestartAsync().Forget();
@@ -196,7 +178,7 @@ internal class UserWatcher
     {
         await _streamSemaphore.WaitAsync();
 
-        try 
+        try
         {
             _StopWatching();
         }
@@ -210,17 +192,10 @@ internal class UserWatcher
 
     private void OnStreamStarted(object? sender, EventArgs e)
     {
-        _streamWatchdogTokenSource?.Cancel();
-        Connected?.Invoke();
+        if (Connected is not null)
+            Task.Run(Connected).Wait();
+
         Log.Write("Twitter stream started.", VRB);
-    }
-
-    private async Task WatchdogActivityAsync()
-    {
-        await Task.Delay(DisconnectTimeoutSpan);
-
-        if (_streamWatchdogTokenSource is null || _streamWatchdogTokenSource.IsCancellationRequested)
-            DisconnectTimeout?.Invoke();
     }
 
     private void _StopWatching()
@@ -265,7 +240,8 @@ internal class UserWatcher
                         continue;
                 try
                 {
-                    TweetReceived?.Invoke(Tweet.FromITweet(tweet));
+                    if (TweetReceived is not null)
+                        await TweetReceived(Tweet.FromITweet(tweet));
                 }
                 catch { }
             }

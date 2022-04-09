@@ -1,6 +1,6 @@
 ﻿using System.Text;
 using System.Data;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using twitterXcrypto.twitter;
 using twitterXcrypto.util;
 using twitterXcrypto.crypto;

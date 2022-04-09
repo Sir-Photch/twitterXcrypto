@@ -60,7 +60,7 @@ try
     };
     IBotStatus statusProblem = new TwitterStatus
     {
-        Name = "Houston we have a problem",
+        Name = "It's awfully quiet in here...",
         Details = string.Empty,
         UserStatus = Discord.UserStatus.DoNotDisturb
     };
@@ -85,8 +85,9 @@ try
     }
 
     UserWatcher watcher = new(userClient);
-    watcher.Connected += async () => await discordClient.SetBotStatusAsync(statusWatching);
-    watcher.DisconnectTimeout += async () => await discordClient.SetBotStatusAsync(statusProblem);
+    watcher.Connected += () => discordClient.SetBotStatusAsync(statusWatching);
+    watcher.Heartbeat += () => discordClient.SetBotStatusAsync(statusWatching);
+    watcher.DisconnectTimeout += () => discordClient.SetBotStatusAsync(statusProblem);
 
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
@@ -120,7 +121,7 @@ try
                 }
                 catch (Exception e)
                 {
-                    Log.Write("Could not read assets from coinmarketbase", e);
+                    await Log.WriteAsync("Could not read assets from coinmarketbase", e);
                 }
                 var assetsFound = coinClient.Assets.Where(asset => textMatches.Contains(asset.Name) || textMatches.Contains(asset.Symbol));
                 await discordWriter;
