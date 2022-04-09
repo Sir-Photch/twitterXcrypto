@@ -82,7 +82,17 @@ try
 
     UserWatcher watcher = new(userClient);
     watcher.Connected += async () => await discordClient.SetBotStatusAsync(statusWatching);
-    watcher.DisconnectTimeout += async () => await discordClient.SetBotStatusAsync(statusProblem);
+    watcher.DisconnectTimeout += async () =>
+    {
+        try 
+        {
+            await discordClient.SetBotStatusAsync(statusProblem);
+        }
+        catch (Exception e)
+        {
+            Log.Write("Could not update bot status!", e);
+        }
+    };
 
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
