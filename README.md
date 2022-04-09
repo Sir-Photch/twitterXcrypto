@@ -1,8 +1,47 @@
 # twitterXcrypto
-Tool initially intended to analyze influencers impact on crypto prices
+.NET 6.0 app initially intended to analyze influencers impact on crypto prices
 
-For now, it receives twitter-posts of given twitter-users, and archives them in a database. Additionally, each tweet is searched for krypto-keywords, and, if some are found, it is posted to a discord channel with the current price and 1h-change of the specific crypto. 
+- configured to run on raspberry-pi as a standalone application with no dependencies
+- gets tweets from users on twitter, searches for cryptocurrency-keywords (as well in text as in images that contain text)
+- posts these tweets to discord, as well as to a database
 
-Tested on Windows-Platform, as well as RPi4 raspbian bullseye 32-bit
+## how to get started
+### build
 
-this is heavy WIP
+Load that thang into VisualStudio and run publish with settings:
+```xml
+<Configuration>Release</Configuration>
+<Platform>ARM32</Platform>
+<PublishDir>...</PublishDir>
+<PublishProtocol>FileSystem</PublishProtocol>
+<TargetFramework>net6.0</TargetFramework>
+<RuntimeIdentifier>linux-arm</RuntimeIdentifier>
+<SelfContained>true</SelfContained>
+<PublishSingleFile>true</PublishSingleFile>
+<PublishTrimmed>true</PublishTrimmed>
+```
+
+### configuration
+You'll need a resource-file defining environment variables, which are sourced when the app is run. In total, there are:
+|Variable name|Contents|
+|---|---|
+|TWITTER_CONSUMERKEY|Twitter api-keys|
+|TWITTER_CONSUMERSECRET||
+|TWITTER_ACCESSTOKEN||
+|TWITTER_ACCESSSECRET||
+|XCMC_PRO_API_KEY|Coinmarketcap api-key|
+|NUM_ASSETS_TO_WATCH|Number of crypto-assets to cache|
+|DISCORD_TOKEN|discord bot-token|
+|DISCORD_CHANNELID|unique channel ID to post messages into|
+|USERS_TO_FOLLOW|comma-seperated list with twitter @usernames|
+|DATABASE_IP|mysql-database connection details|
+|DATABASE_PORT||
+|DATABASE_NAME||
+|DATABASE_USER||
+|DATABASE_PWD||
+|TESSERACT_LOCALE|locale for OCR. use `eng` if unsure|
+|TESSERACT_WHITELIST|characters to whitelist for OCR|
+
+### running
+If for some reason you want to run this _HEAVY-WIP_ project, I recommend using `screen` to detach from it. 
+Logs are saved to `/var/log/twitterXcrypto/twixcry.log` on linux. glhf
