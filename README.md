@@ -4,7 +4,7 @@
 - configured to run on raspberry-pi as a standalone application with no dependencies
 - gets tweets from users on twitter, searches for cryptocurrency-keywords (as well in text as in images that contain text)
 - posts these tweets to discord, as well as to a database
-- attaches price and -change of mentioned asset
+- attaches price and -change of mentioned asset to discord post
 
 ## how to get started
 ### build
