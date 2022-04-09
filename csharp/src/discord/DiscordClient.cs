@@ -29,8 +29,15 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
 
     internal async Task SetBotStatusAsync(IBotStatus botStatus)
     {
-        await _client.SetStatusAsync(botStatus.UserStatus);
-        await _client.SetActivityAsync(botStatus);
+        try
+        {
+            await _client.SetStatusAsync(botStatus.UserStatus);
+            await _client.SetActivityAsync(botStatus);
+        }
+        catch (Exception e)
+        {
+            await Log.WriteAsync("Could not update bot-status!", e);
+        }
     }
 
     internal async Task ConnectAsync(string token)
@@ -63,7 +70,7 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
                 await _channel.SendFileAsync(ms, img.Name);
             });
         }
-    }    
+    }
 
     #region IDisposable
     private bool _disposed = false;
