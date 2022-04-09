@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Tweetinvi;
-using Tweetinvi.Streaming;
 using twitterXcrypto.text;
 using twitterXcrypto.util;
 using twitterXcrypto.data;
@@ -9,6 +8,8 @@ using twitterXcrypto.discord;
 using twitterXcrypto.twitter;
 using twitterXcrypto.imaging;
 using static twitterXcrypto.util.EnvironmentVariables;
+
+#pragma warning disable CS8604, CS8601, VSTHRD003 // possible null-arguments, thread started outside of context
 
 try
 {
@@ -50,7 +51,7 @@ try
 
     IBotStatus statusWatching = new TwitterStatus
     {
-        Name = $"Stalking crypto influencers {char.ConvertFromUtf32(0x1F440)}", // eye emoji
+        Name = $"Stalking crypto influencers {char.ConvertFromUtf32(0x1F440)}", // 👀
         Details = string.Empty,
         UserStatus = Discord.UserStatus.Online
     };
@@ -97,9 +98,7 @@ try
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
     {
-#pragma warning disable VSTHRD003 // thread is not started outside of lambda context
         await dbWriter;
-#pragma warning restore VSTHRD003
         dbWriter = dbClient.WriteTweetAsync(tweet);
         IAsyncEnumerable<Image>? pics = tweet.ContainsImages ? tweet.GetImagesAsync() : null;
 
@@ -160,3 +159,5 @@ catch (Exception e)
 }
 
 Environment.Exit(0);
+
+#pragma warning restore CS8604, CS8601, VSTHRD003

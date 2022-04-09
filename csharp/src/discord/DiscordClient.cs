@@ -70,12 +70,12 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await DisposeAsyncCore().ConfigureAwait(false);
+        await DisposeCoreAsync().ConfigureAwait(false);
         Dispose(false);
         GC.SuppressFinalize(this);
     }
 
-    protected virtual async ValueTask DisposeAsyncCore()
+    protected virtual async ValueTask DisposeCoreAsync()
     {
         if (_disposed) return;
 

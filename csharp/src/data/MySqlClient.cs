@@ -258,7 +258,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    protected virtual async ValueTask DisposeAsyncCore()
+    protected virtual async ValueTask DisposeCoreAsync()
     {
         if (_con is not null)
         {
@@ -269,7 +269,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await DisposeAsyncCore().ConfigureAwait(false);
+        await DisposeCoreAsync().ConfigureAwait(false);
         Dispose(false);
         GC.SuppressFinalize(this);
     }
