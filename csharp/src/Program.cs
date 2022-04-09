@@ -11,6 +11,9 @@ using static twitterXcrypto.util.EnvironmentVariables;
 
 #pragma warning disable CS8604, CS8601, VSTHRD003 // possible null-arguments, thread started outside of context
 
+AppDomain.CurrentDomain.UnhandledException += (sender, args) 
+    => Log.Write("Unhandled Exception!", args.ExceptionObject as Exception, Log.Level.FTL);
+
 try
 {
     var missingVariables = Check();
@@ -144,7 +147,7 @@ try
 }
 catch (Exception e)
 {
-    Log.Write("Unhandled Exception", e, Log.Level.FTL);
+    Log.Write("Unexpected Exception!", e, Log.Level.FTL);
     Environment.Exit(1);
 }
 
