@@ -86,6 +86,7 @@ try
 
     UserWatcher watcher = new(userClient);
     watcher.Connected += () => discordClient.SetBotStatusAsync(statusWatching);
+    watcher.Heartbeat += () => discordClient.SetBotStatusAsync(statusWatching);
     watcher.DisconnectTimeout += () => discordClient.SetBotStatusAsync(statusProblem);
 
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;

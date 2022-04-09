@@ -128,13 +128,11 @@ internal class UserWatcher
     {
         await Log.WriteAsync($"Watchdog timeout after {timeout}, lasted {elapsed}");
         if (DisconnectTimeout is not null)
-            await Task.Run(DisconnectTimeout);
+            await DisconnectTimeout();
     }
 
     private async Task OnWatchdogPetAsync(TimeSpan elapsed)
     {
-        await Log.WriteAsync("Watchdog was sedated", VRB);
-
         if (!await _heartbeatInvokeSemaphore.WaitAsync(0))
             return;
 
