@@ -47,63 +47,19 @@ internal class UserWatcher
 
     #endregion
 
-    #region methods
+    #region methods    
 
     internal void StartWatching()
     {
-        if (IsWatching) return;
-
-        _stream = _client.Streams.CreateFilteredStream();
-
-        _users.Keys.ForEach(uid => _stream.AddFollow(uid));
-
-        _stream.DisconnectMessageReceived += OnStreamDisconnectMessageReceived;
-        _stream.StreamStopped += OnStreamStopped;
-        _stream.MatchingTweetReceived += OnMatchingTweetReceived;
-        _stream.StreamStarted += OnStreamStarted;
-
-        _tweetQueueTokenSource = new();
-        // task getting and filtering tweets from twitter
-        Task.Run(async () =>
-        {
-            await foreach (ITweet tweet in _tweetQueue.WithCancellation(_tweetQueueTokenSource.Token))
-            {
-                lock (_users)
-                    if (!_users.ContainsKey(tweet.CreatedBy.Id))
-                        continue;
-                try
-                {
-                    TweetReceived?.Invoke(Tweet.FromITweet(tweet));
-                }
-                catch { }
-            }
-        }).Forget();
-        // task streaming twitter
-        _streamSemaphore.Wait();
-        Task.Run(_stream.StartMatchingAnyConditionAsync).Forget();
-        _isWatching = true;
-
+        _StartWatching();
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
     }
 
     internal void StopWatching()
     {
-        if (!IsWatching) return;
-
-        if (_stream is null)
-            return;
-
-        _stream.Stop();
-        _tweetQueueTokenSource?.Cancel();
-        
-        _stream.StreamStarted -= OnStreamStarted;
-        _stream.StreamStopped -= OnStreamStopped;
-        _stream.MatchingTweetReceived -= OnMatchingTweetReceived;
-        _stream.DisconnectMessageReceived -= OnStreamDisconnectMessageReceived;
-        Log.Write("Stopped watching");
-
-        _isWatching = false;
-    }
+        _StopWatching();
+        Log.Write("Stopped watching");        
+    }    
 
     internal async Task<bool> AddUserAsync(string username)
     {
@@ -208,7 +164,7 @@ internal class UserWatcher
                 _streamWatchdog = WatchdogActivityAsync();
             }
             
-            Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, WRN);
+            Log.Write($"Stream stopped unexpectedly. Restarting...", e.Exception, VRB);
             WaitRestartAsync().Forget();
         }
         _streamSemaphore.Release();
@@ -220,7 +176,7 @@ internal class UserWatcher
 
         bool success = _tweetQueue.Enqueue(e.Tweet);
         if (!success)
-            Log.Write("Could not post tweet to queue");
+            Log.Write("Could not post tweet to queue", VRB);
     }
 
     private void OnStreamDisconnectMessageReceived(object? sender, Tweetinvi.Events.DisconnectedEventArgs e)
@@ -242,21 +198,21 @@ internal class UserWatcher
 
         try 
         {
-            StopWatching();
+            _StopWatching();
         }
         catch (Exception e)
         {
             await Log.WriteAsync($"Stream restart cleanup failed", e);
         }
 
-        StartWatching();
+        _StartWatching();
     }
 
     private void OnStreamStarted(object? sender, EventArgs e)
     {
         _streamWatchdogTokenSource?.Cancel();
         Connected?.Invoke();
-        Log.Write("Twitter stream started.");
+        Log.Write("Twitter stream started.", VRB);
     }
 
     private async Task WatchdogActivityAsync()
@@ -265,6 +221,59 @@ internal class UserWatcher
 
         if (_streamWatchdogTokenSource is null || _streamWatchdogTokenSource.IsCancellationRequested)
             DisconnectTimeout?.Invoke();
+    }
+
+    private void _StopWatching()
+    {
+        if (!IsWatching) return;
+
+        if (_stream is null)
+            return;
+
+        _stream.Stop();
+        _tweetQueueTokenSource?.Cancel();
+
+        _stream.StreamStarted -= OnStreamStarted;
+        _stream.StreamStopped -= OnStreamStopped;
+        _stream.MatchingTweetReceived -= OnMatchingTweetReceived;
+        _stream.DisconnectMessageReceived -= OnStreamDisconnectMessageReceived;
+
+        _isWatching = false;
+    }
+
+    private void _StartWatching()
+    {
+        if (IsWatching) return;
+
+        _stream = _client.Streams.CreateFilteredStream();
+
+        _users.Keys.ForEach(uid => _stream.AddFollow(uid));
+
+        _stream.DisconnectMessageReceived += OnStreamDisconnectMessageReceived;
+        _stream.StreamStopped += OnStreamStopped;
+        _stream.MatchingTweetReceived += OnMatchingTweetReceived;
+        _stream.StreamStarted += OnStreamStarted;
+
+        _tweetQueueTokenSource = new();
+        // task getting and filtering tweets from twitter
+        Task.Run(async () =>
+        {
+            await foreach (ITweet tweet in _tweetQueue.WithCancellation(_tweetQueueTokenSource.Token))
+            {
+                lock (_users)
+                    if (!_users.ContainsKey(tweet.CreatedBy.Id))
+                        continue;
+                try
+                {
+                    TweetReceived?.Invoke(Tweet.FromITweet(tweet));
+                }
+                catch { }
+            }
+        }).Forget();
+        // task streaming twitter
+        _streamSemaphore.Wait();
+        Task.Run(_stream.StartMatchingAnyConditionAsync).Forget();
+        _isWatching = true;
     }
 
     #endregion

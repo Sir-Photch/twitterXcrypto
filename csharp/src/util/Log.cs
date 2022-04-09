@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using Serilog;
 using twitterXcrypto.twitter;
+using Serilog.Events;
 
 namespace twitterXcrypto.util;
 
@@ -43,7 +44,8 @@ internal static class Log
                                                          rollingInterval: RollingInterval.Infinite,
                                                          outputTemplate: OUTPUT_TEMPLATE,
                                                          encoding: Encoding.Unicode,
-                                                         shared: true)
+                                                         shared: true,
+                                                         restrictedToMinimumLevel: LogEventLevel.Information)
                                            .CreateLogger();
     }
     #endregion
