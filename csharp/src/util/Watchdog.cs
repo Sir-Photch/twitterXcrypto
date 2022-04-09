@@ -1,6 +1,6 @@
 ﻿namespace twitterXcrypto.util;
 
-internal class Watchdog : IDisposable
+internal class Watchdog
 {
     #region private fields
     private readonly Task _task;
@@ -67,12 +67,6 @@ internal class Watchdog : IDisposable
     {
         Interlocked.Exchange(ref _sedated, 1);
         try { OnPet?.Invoke(DateTime.Now - _created); } catch { }
-    }
-
-    public void Dispose()
-    {
-        _cts.Dispose();
-        _task.Dispose();
     }
 
     #endregion

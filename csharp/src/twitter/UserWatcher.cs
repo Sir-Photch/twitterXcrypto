@@ -72,31 +72,7 @@ internal class UserWatcher
         Log.Write("Stopped watching");
     }
 
-    internal async Task<bool> AddUserAsync(string username)
-    {
-        IUser iUser;
-        try
-        {
-            iUser = await _client.Users.GetUserAsync(username);
-        }
-        catch (Exception e)
-        {
-            await Log.WriteAsync($"Could not find user {username}", e);
-            return false;
-        }
-
-        lock (_users)
-        {
-            if (_users.ContainsKey(iUser.Id))
-                return true;
-
-            _users[iUser.Id] = new User { Name = iUser.Name, Id = iUser.Id };
-        }
-
-        return true;
-    }
-
-    internal async Task<bool> AddUserAsync(string[] usernames)
+    internal async Task<bool> AddUserAsync(params string[] usernames)
     {
         IUser[] iUsers;
         try
@@ -123,24 +99,7 @@ internal class UserWatcher
         return true;
     }
 
-    internal async Task<bool> RemoveUserAsync(string username)
-    {
-        IUser iUser;
-        try
-        {
-            iUser = await _client.Users.GetUserAsync(username);
-        }
-        catch (Exception e)
-        {
-            await Log.WriteAsync("Could not find user", e);
-            return false;
-        }
-
-        lock (_users)
-            return _users.Remove(iUser.Id);
-    }
-
-    internal async Task<bool> RemoveUserAsync(string[] usernames)
+    internal async Task<bool> RemoveUserAsync(params string[] usernames)
     {
         IUser[] iUsers;
         try
