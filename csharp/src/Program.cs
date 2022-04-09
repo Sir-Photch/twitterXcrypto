@@ -60,7 +60,7 @@ try
     };
     IBotStatus statusProblem = new TwitterStatus
     {
-        Name = "Houston we have a problem",
+        Name = "It's awfully quiet in here...",
         Details = string.Empty,
         UserStatus = Discord.UserStatus.DoNotDisturb
     };
