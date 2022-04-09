@@ -15,7 +15,7 @@ internal class Watchdog
     internal delegate Task TimeoutHandler(TimeSpan timeout, TimeSpan elapsed);
     internal event TimeoutHandler? OnTimeout;
 
-    internal delegate void PetHandler(TimeSpan elapsed);
+    internal delegate Task PetHandler(TimeSpan elapsed);
     internal event PetHandler? OnPet;
 
     #endregion

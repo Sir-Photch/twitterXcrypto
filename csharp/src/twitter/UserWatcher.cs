@@ -38,13 +38,13 @@ internal class UserWatcher
 
     internal bool IsWatching => _isWatching;
 
-    internal event Action<Tweet>? TweetReceived;
+    internal event Func<Tweet, Task>? TweetReceived;
 
-    internal event Action? DisconnectTimeout;
+    internal event Func<Task>? DisconnectTimeout;
 
-    internal event Action? Connected;
+    internal event Func<Task>? Connected;
 
-    internal event Action? Heartbeat;
+    internal event Func<Task>? Heartbeat;
 
     internal TimeSpan DisconnectTimeoutSpan { get; set; } = TimeSpan.FromSeconds(30.0);
 
@@ -57,7 +57,7 @@ internal class UserWatcher
         _StartWatching();
         _watchdog = new(DisconnectTimeoutSpan, continueOnAlert: true);
         _watchdog.OnTimeout += OnWatchdogTimeoutAsync;
-        _watchdog.OnPet += OnWatchdogPet;
+        _watchdog.OnPet += OnWatchdogPetAsync;
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
     }    
 
@@ -65,7 +65,7 @@ internal class UserWatcher
     {
         if (_watchdog is not null)
         {
-            _watchdog.OnPet -= OnWatchdogPet;
+            _watchdog.OnPet -= OnWatchdogPetAsync;
             _watchdog.OnTimeout -= OnWatchdogTimeoutAsync;
         }
         _StopWatching();
@@ -131,15 +131,17 @@ internal class UserWatcher
             await Task.Run(DisconnectTimeout);
     }
 
-    private void OnWatchdogPet(TimeSpan elapsed)
+    private async Task OnWatchdogPetAsync(TimeSpan elapsed)
     {
-        Log.Write("Watchdog was sedated", VRB);
+        await Log.WriteAsync("Watchdog was sedated", VRB);
 
-        if (!_heartbeatInvokeSemaphore.Wait(0))
+        if (!await _heartbeatInvokeSemaphore.WaitAsync(0))
             return;
+
         try
         {
-            Heartbeat?.Invoke();
+            if (Heartbeat is not null)
+                await Heartbeat();
         }
         finally
         {
@@ -192,7 +194,9 @@ internal class UserWatcher
 
     private void OnStreamStarted(object? sender, EventArgs e)
     {
-        Connected?.Invoke();
+        if (Connected is not null)
+            Task.Run(Connected).Wait();
+
         Log.Write("Twitter stream started.", VRB);
     }
 
@@ -238,7 +242,8 @@ internal class UserWatcher
                         continue;
                 try
                 {
-                    TweetReceived?.Invoke(Tweet.FromITweet(tweet));
+                    if (TweetReceived is not null)
+                        await TweetReceived(Tweet.FromITweet(tweet));
                 }
                 catch { }
             }
