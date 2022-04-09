@@ -10,6 +10,7 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
     private readonly DiscordSocketClient _client;
     private readonly ulong _channelId;
     private IMessageChannel? _channel;
+    private readonly SemaphoreSlim _botStatusSemaphore = new(1);
 
     internal DiscordClient(ulong channelId)
     {
@@ -29,6 +30,9 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
 
     internal async Task SetBotStatusAsync(IBotStatus botStatus)
     {
+        if (!await _botStatusSemaphore.WaitAsync(0))
+            return;
+
         try
         {
             await _client.SetStatusAsync(botStatus.UserStatus);
@@ -37,6 +41,10 @@ internal class DiscordClient : IAsyncDisposable, IDisposable
         catch (Exception e)
         {
             await Log.WriteAsync("Could not update bot-status!", e);
+        }
+        finally
+        {
+            _botStatusSemaphore.Release();
         }
     }
 
