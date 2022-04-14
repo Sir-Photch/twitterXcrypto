@@ -18,7 +18,7 @@ internal class UserWatcher
     private readonly SemaphoreSlim _heartbeatInvokeSemaphore = new(1);
     private Watchdog? _watchdog;
 
-    private readonly util.AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = true };
+    private readonly util.AsyncQueue<ITweet> _tweetQueue = new() { CompleteWhenCancelled = false };
     private CancellationTokenSource? _tweetQueueTokenSource;
 
     private readonly SemaphoreSlim _streamSemaphore = new(1);

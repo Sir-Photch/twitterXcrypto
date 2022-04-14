@@ -10,7 +10,7 @@ internal class AsyncQueue<T> : IAsyncEnumerable<T>
     private readonly SemaphoreSlim _semaphore = new(1);
     private readonly BufferBlock<T> _buffer = new();
 
-    internal bool CompleteWhenCancelled { get; init; }
+    internal bool CompleteWhenCancelled { get; init; } = false;
 
     internal bool Enqueue(T item) => _buffer.Post(item);
 
