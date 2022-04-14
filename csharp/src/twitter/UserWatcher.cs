@@ -128,7 +128,15 @@ internal class UserWatcher
     {
         await Log.WriteAsync($"Watchdog timeout after {timeout}, lasted {elapsed}");
         if (DisconnectTimeout is not null)
-            await DisconnectTimeout();
+        {
+            var tasks = DisconnectTimeout.GetInvocationList()
+                                         .OfType<Task>();
+
+            tasks.Where(task => !task.IsCompleted)
+                 .ForEach(task => task.Start());
+
+            await Task.WhenAll(tasks);
+        }
     }
 
     private async Task OnWatchdogPetAsync(TimeSpan elapsed)

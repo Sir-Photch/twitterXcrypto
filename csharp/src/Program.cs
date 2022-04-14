@@ -62,7 +62,7 @@ try
     {
         Name = "It's awfully quiet in here...",
         Details = string.Empty,
-        UserStatus = Discord.UserStatus.DoNotDisturb
+        UserStatus = Discord.UserStatus.AFK
     };
     await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID]));
 
