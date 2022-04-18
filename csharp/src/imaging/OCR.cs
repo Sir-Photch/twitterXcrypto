@@ -65,8 +65,8 @@ namespace twitterXcrypto.imaging
         private readonly Tesseract _ocr;
         private static string? _tesseractDir;
 
-        private OCR() 
-        { 
+        private OCR()
+        {
             _ocr = new Tesseract(_tesseractDir, Locale, OcrEngineMode.TesseractLstmCombined, Whitelist);
             Log.Write($"Initialized Tesseract OCR for locale {Locale}");
         }

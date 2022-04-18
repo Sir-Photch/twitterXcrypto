@@ -1,106 +1,48 @@
 ﻿using Discord;
-using Discord.WebSocket;
+using Discord.Webhook;
 using twitterXcrypto.twitter;
 using twitterXcrypto.util;
 
 namespace twitterXcrypto.discord;
 
-internal class DiscordClient : IAsyncDisposable, IDisposable
+internal class DiscordClient : IDisposable
 {
-    private readonly DiscordSocketClient _client;
+    private readonly DiscordWebhookClient _client;
     private readonly ulong _channelId;
-    private IMessageChannel? _channel;
     private readonly SemaphoreSlim _botStatusSemaphore = new(1);
 
-    internal DiscordClient(ulong channelId)
+    internal DiscordClient(string webhookUrl)
     {
-        _channelId = channelId;
+        _client = new DiscordWebhookClient(webhookUrl);
 
-        //DiscordSocketConfig cfg = new() 
-        //{ 
-        //    GatewayIntents = GatewayIntents.AllUnprivileged | ~GatewayIntents.GuildScheduledEvents | ~GatewayIntents.GuildInvites
-        //};
-
-        _client = new DiscordSocketClient(/*cfg*/);
         _client.Log += msg => Log.WriteAsync(msg.Message, msg.Exception, ToLogLevel(msg.Severity));
-        _client.Connected += () => Log.WriteAsync("Connected to Discord!");
-        _client.Disconnected += ex => Log.WriteAsync("Disconnected from Discord!", ex, ex is null or TaskCanceledException ? Log.Level.INF : Log.Level.ERR);
-        _client.Ready += () => Log.WriteAsync("Discord-Bot ready!");
     }
 
-    internal async Task SetBotStatusAsync(IBotStatus botStatus)
-    {
-        if (!await _botStatusSemaphore.WaitAsync(0))
-            return;
-
-        try
-        {
-            await _client.SetStatusAsync(botStatus.UserStatus);
-            await _client.SetActivityAsync(botStatus);
-        }
-        catch (Exception e)
-        {
-            await Log.WriteAsync("Could not update bot-status!", e);
-        }
-        finally
-        {
-            _botStatusSemaphore.Release();
-        }
-    }
-
-    internal async Task ConnectAsync(string token)
-    {
-        await _client.LoginAsync(TokenType.Bot, token);
-        await _client.StartAsync();
-        _channel = (IMessageChannel)await _client.GetChannelAsync(_channelId);
-    }
-
-    internal IDisposable EnterTypingState() => _channel?.EnterTypingState() ?? throw new InvalidOperationException("Not connected");
-
-    internal Task WriteAsync(string message) => _channel?.SendMessageAsync(message) ?? throw new InvalidOperationException("Not connected");
+    internal async Task WriteAsync(string text) =>
+        await _client.SendMessageAsync(text);
 
     internal async Task WriteAsync(Tweet tweet)
     {
-        if (_channel is null)
-            throw new InvalidOperationException("Not connected");
 
-        await _channel.SendMessageAsync(tweet.ToString(prependUser: true,
+        await _client.SendMessageAsync(tweet.ToString(prependUser: true,
                                                       replaceLineEndings: true,
                                                       lineEndingReplacement: Environment.NewLine));
 
         if (tweet.ContainsImages)
         {
-            await tweet.GetImagesAsync().ForEachAsync(async img =>
+            var images = await tweet.GetImagesAsync().Select(image =>
             {
-                using MemoryStream ms = new();
-                await img.SaveAsync(ms);
-                ms.Position = 0L;
-                await _channel.SendFileAsync(ms, img.Name);
-            });
+                MemoryStream ms = new();
+                image.Save(ms);
+                return new FileAttachment(ms, image.Name, isSpoiler: true);
+            }).ToArrayAsync();
+
+            await _client.SendFilesAsync(images, "Images in tweet");
         }
     }
 
     #region IDisposable
     private bool _disposed = false;
-
-    public async ValueTask DisposeAsync()
-    {
-        await DisposeCoreAsync().ConfigureAwait(false);
-        Dispose(false);
-        GC.SuppressFinalize(this);
-    }
-
-    protected virtual async ValueTask DisposeCoreAsync()
-    {
-        if (_disposed) return;
-
-        if (_client is not null)
-        {
-            await _client.StopAsync().ConfigureAwait(false);
-            await _client.LogoutAsync().ConfigureAwait(false);
-            await _client.DisposeAsync().ConfigureAwait(false);
-        }
-    }
 
     public void Dispose()
     {

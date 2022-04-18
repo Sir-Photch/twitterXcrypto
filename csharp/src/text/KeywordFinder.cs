@@ -1,6 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using twitterXcrypto.util;
 
 [assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 

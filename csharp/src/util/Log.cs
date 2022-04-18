@@ -1,8 +1,8 @@
-﻿using System.Text;
-using System.Runtime.InteropServices;
-using Serilog;
-using twitterXcrypto.twitter;
+﻿using Serilog;
 using Serilog.Events;
+using System.Runtime.InteropServices;
+using System.Text;
+using twitterXcrypto.twitter;
 
 namespace twitterXcrypto.util;
 
@@ -116,10 +116,16 @@ internal static class Log
     internal static void Write(Tweet tweet) => _logger.ForContext("TweetUserName", $" [{tweet.User.Name}]:").Verbose(tweet.ToString(replaceLineEndings: true));
 
     internal static Task WriteAsync(string message, Level level = Level.INF)
-        => Task.Run(() => Write(message, level));
+    {
+        Write(message, level);
+        return Task.CompletedTask;
+    }
 
     internal static Task WriteAsync(string message, Exception e, Level level = Level.ERR)
-        => Task.Run(() => Write(message, e, level));
+    {
+        Write(message, e, level);
+        return Task.CompletedTask;
+    }
 
     #endregion
 }

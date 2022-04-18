@@ -1,6 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-using Emgu.CV;
+﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 
