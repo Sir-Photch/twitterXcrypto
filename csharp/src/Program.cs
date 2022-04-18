@@ -136,7 +136,7 @@ try
 
     watcher.StartWatching();
 
-    while (Console.ReadKey().KeyChar != 'q') ;
+    while (Console.ReadKey(intercept: true).KeyChar != 'q') ;
 
     watcher.StopWatching();
     ocr?.Dispose();
