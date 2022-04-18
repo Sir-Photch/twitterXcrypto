@@ -44,4 +44,4 @@ You'll need a resource-file defining environment variables, which are sourced wh
 
 ### running
 If for some reason you want to run this _HEAVY-WIP_ project, I recommend using `screen` to detach from it. 
-Logs are saved to `/var/log/twitterXcrypto/twixcry.log` on linux. glhf
+Logs are saved to `/var/log/twitterXcrypto/twixcry.log` on linux. (yeah I know that is not the proper place for user logs. didn't refactor yet.) glhf
