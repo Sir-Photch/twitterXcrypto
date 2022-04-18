@@ -1,10 +1,10 @@
-﻿using System.Text;
+﻿using MySqlConnector;
 using System.Data;
-using MySqlConnector;
-using twitterXcrypto.twitter;
-using twitterXcrypto.util;
+using System.Text;
 using twitterXcrypto.crypto;
 using twitterXcrypto.imaging;
+using twitterXcrypto.twitter;
+using twitterXcrypto.util;
 
 namespace twitterXcrypto.data;
 
@@ -105,7 +105,7 @@ internal class MySqlClient : IAsyncDisposable, IDisposable
         await using MySqlCommand insertMentions = _con.CreateCommand();
         insertMentions.CommandType = CommandType.Text;
         insertMentions.CommandText = sb.ToString();
-        
+
         try
         {
             await Task.WhenAll(tasks);

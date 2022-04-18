@@ -59,7 +59,7 @@ internal class UserWatcher
         _watchdog.OnTimeout += OnWatchdogTimeoutAsync;
         _watchdog.OnPet += OnWatchdogPetAsync;
         Log.Write($"Started watching Users: {string.Join(", ", _users.Select(kvp => kvp.Value.ToString()))}");
-    }    
+    }
 
     internal void StopWatching()
     {

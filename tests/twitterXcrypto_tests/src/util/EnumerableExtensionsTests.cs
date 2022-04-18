@@ -35,8 +35,8 @@ public class EnumerableExtensionsTests
     [TestMethod]
     public void ContainsEveryTest()
     {
-        string[] values = {"foo", "bar", "baz"};
-        string[] matches = {"foo", "boo", "baz"};
+        string[] values = { "foo", "bar", "baz" };
+        string[] matches = { "foo", "boo", "baz" };
 
         Assert.IsFalse(values.ContainsEvery(matches));
         Assert.IsTrue(values.ContainsEvery(values));

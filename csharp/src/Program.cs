@@ -1,17 +1,17 @@
 ﻿using System.Text;
 using Tweetinvi;
-using twitterXcrypto.text;
-using twitterXcrypto.util;
-using twitterXcrypto.data;
 using twitterXcrypto.crypto;
+using twitterXcrypto.data;
 using twitterXcrypto.discord;
-using twitterXcrypto.twitter;
 using twitterXcrypto.imaging;
+using twitterXcrypto.text;
+using twitterXcrypto.twitter;
+using twitterXcrypto.util;
 using static twitterXcrypto.util.EnvironmentVariables;
 
 #pragma warning disable CS8604, CS8601, VSTHRD003 // possible null-arguments, thread started outside of context
 
-AppDomain.CurrentDomain.UnhandledException += (sender, args) 
+AppDomain.CurrentDomain.UnhandledException += (sender, args)
     => Log.Write("Unhandled Exception!", args.ExceptionObject as Exception, Log.Level.FTL);
 
 try
@@ -64,7 +64,7 @@ try
         Details = string.Empty,
         UserStatus = Discord.UserStatus.AFK
     };
-    await using DiscordClient discordClient = new(ulong.Parse(Tokens[DISCORD_CHANNELID]));
+    using DiscordClient discordClient = new(Tokens[DISCORD_WEBHOOK_URL]);
 
     await using MySqlClient? dbClient = new(Tokens[DATABASE_IP],
                                             int.Parse(Tokens[DATABASE_PORT]),
@@ -85,9 +85,6 @@ try
     }
 
     UserWatcher watcher = new(userClient);
-    watcher.Connected += () => discordClient.SetBotStatusAsync(statusWatching);
-    watcher.Heartbeat += () => discordClient.SetBotStatusAsync(statusWatching);
-    watcher.DisconnectTimeout += () => discordClient.SetBotStatusAsync(statusProblem);
 
     Task dbWriter = Task.CompletedTask, discordWriter = Task.CompletedTask;
     watcher.TweetReceived += async (tweet) =>
@@ -110,7 +107,6 @@ try
         var textMatches = keywordFinder?.Match(textToSearch.ToString());
         if (textMatches?.Any() ?? true)
         {
-            using var typingState = discordClient.EnterTypingState();
             await discordWriter;
             discordWriter = discordClient.WriteAsync(tweet);
             if (textMatches?.Any() ?? false)
@@ -136,7 +132,6 @@ try
     };
     await dbClient.OpenAsync();
     await watcher.AddUserAsync(UsersToFollow.ToArray());
-    await discordClient.ConnectAsync(Tokens[DISCORD_TOKEN]);
     await keywordInitializer;
 
     watcher.StartWatching();

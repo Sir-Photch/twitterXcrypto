@@ -1,5 +1,5 @@
-﻿using System.Text;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 
 [assembly: InternalsVisibleTo("twitterXcrypto_tests")]
 
