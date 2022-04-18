@@ -32,8 +32,7 @@ You'll need a resource-file defining environment variables, which are sourced wh
 |TWITTER_ACCESSSECRET||
 |XCMC_PRO_API_KEY|Coinmarketcap api-key|
 |NUM_ASSETS_TO_WATCH|Number of crypto-assets to cache|
-|DISCORD_TOKEN|discord bot-token|
-|DISCORD_CHANNELID|unique channel ID to post messages into|
+|DISCORD_WEBHOOK_URL|discord webhook-url|
 |USERS_TO_FOLLOW|comma-seperated list with twitter @usernames|
 |DATABASE_IP|mysql-database connection details|
 |DATABASE_PORT||
